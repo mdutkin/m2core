@@ -1,0 +1,25 @@
+language: python
+
+branches:
+  only:
+  - master
+  - travic-ci-integration
+  - /^\d+(\.\d+)+$/
+on:
+  tags: true
+
+script:
+- echo "TRAVIS_TAG is $TRAVIS_TAG"
+- if [ -n "$TRAVIS_TAG" ]; then echo $TRAVIS_TAG > version.txt; fi
+
+deploy:
+  provider: pypi
+  user: mdutkin
+  password:
+    secure: "5WeJycApyEkpc/2ypC9xTtVU9uff2tHO5VBI3FF1hdqttiSSO5JwENBXOVoHkjWHcc1r3RRuoUrTcwufoF8KRlVuaHl1B4t67oym5QWFJZTj55+k/hF1ZN2FnWit/k5a5sti2+ZCqk2jm77REGjjSRb3zsA4CyzDxhkrobl+6Sh5GJCQGlj2fmUqep5acSKPKEH4qYoeFjcHV9rZOOtB7p5/FOP49vyGvAcEQM9EO+gqGdTlNrG3Yp7/pskKF3K4y/ES9EbukPBe5Gkp17AA4u5uqbO3cSzzPSBawF+enAapMq+xCSjcMqR1F8Qexhi+r9USHvpvON5hTXwvvHkJO+8p1H5jL/+VgwI6bS6nyBthhle+4gg5clpXha669Flf3sszVd6XMnWt/aS8hya/xA6xs4Z/XUWpNdQJl3E/+ZvA+ozqth3aVQiKg/Zb9sKnQZmK8oaqpmRBLXGlbMseM4yMEfLmGDk3CUocOhUIU2p6nLDJt6uR7bYptsVW5oCEIjoZBMA4k3HmC3rycCp/+ndlH1fr0NJuskD7IZQ9TWJ/hbWKf8RzTv7uAelIbZ4ZbbJ3ArxBkD9K3SQb0PBbgaspWkNDJQqWXtvnZDfYUaCGLVNgWKBHFrKOCJsOhypOh2JbEgfIIlPCbPwQWgq25AluiJg53KYq39cWtIgDjck="
+  on:
+    tags: true
+  skip_cleanup: true
+  notifications:
+    email:
+      - max@dutkin.ru
