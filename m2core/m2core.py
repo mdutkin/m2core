@@ -39,13 +39,12 @@ define('xsrf_cookie', default=False, help='Enable or disable XSRF-cookie protect
 define('cookie_secret', default='gfqeg4t023ty724ythweirhgiuwehrtp', type=str)
 define('server_port', default=8888, help='TCP server bind port', type=int)
 define('locale', default='ru_RU.UTF-8', help='Server locale for dates, times, currency and etc', type=str)
-define('log_file', default='/logs.txt', help='Path to log file', type=str)
 define('json_indent', default=2,
        help='Number of `space` characters, which are used in json responses after new lines', type=int)
 define('thread_pool_size', default=10, help='Pool size for background executor', type=int)
 define('gen_salt', default=12, help='Argument for gen_salt func in bcrypt module', type=int)
 # - database config
-define('pg_host', default='172.16.31.244', help='Database host', type=str)
+define('pg_host', default='127.0.0.1', help='Database host', type=str)
 define('pg_port', default=5432, help='Database port', type=int)
 define('pg_db', default='m2core', help='Database name', type=str)
 define('pg_user', default='postgres', help='Database user', type=str)
