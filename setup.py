@@ -28,7 +28,6 @@ setup(
     author_email='max@dutkin.ru',
     classifiers=[
         'Environment :: Web Environment',
-        'Framework :: Tornado',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
