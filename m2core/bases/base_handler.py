@@ -63,6 +63,9 @@ class BaseHandler(RequestHandler):
         self._thread_pool = application.settings['thread_pool']
         self._url_parser = lambda x: True
         self._human_route = ''
+        """Expire sql alchemy inner cache when initializing BaseHandler for incoming client"""
+        if options.expire_on_connect:
+            self._session.expire_all()
         super(BaseHandler, self).__init__(application, request, **kwargs)
 
     def set_default_headers(self):
