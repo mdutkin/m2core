@@ -68,7 +68,7 @@ class DataMixin(SessionMixin):
         """
         Внутренний метод обработки параметров, переданных в запрос load_all, load_all_with_paginate
         :param initial_query экземпляр sqlalchemy Query, к которой мы дальше добавим все .filter()
-        :return: 
+        :return:
         """
         ops = {
             '>': operator.gt,
@@ -115,23 +115,30 @@ class DataMixin(SessionMixin):
         return self.save()
 
     def set(self, **_params):
-        for name in _params.keys():
-            if name in self.settable_attributes:
-                setattr(self, name, _params[name])
-            else:
-                raise M2Error('Error while trying to set non-existent property `%s`' % name)
-        return self
+        try:
+            for name in _params.keys():
+                if name in self.settable_attributes:
+                    setattr(self, name, _params[name])
+                else:
+                    raise M2Error('Error while trying to set non-existent property `%s`' % name)
+            return self
+        except SQLAlchemyError:
+            self.s.rollback()
+            raise
 
     def get(self, item):
         """
         Универсальный геттер атрибутов из самой sqlalchemy-модели
-        :param item: 
-        :return: 
+        :param item:
+        :return:
         """
         try:
             data = copy.deepcopy(getattr(self, item))
         except AttributeError:
             raise M2Error('Error while trying to get non-existent property `%s`' % item, False)
+        except SQLAlchemyError:
+            self.s.rollback()
+            raise
         return data
 
     @classmethod
@@ -139,28 +146,40 @@ class DataMixin(SessionMixin):
         """
         Возвращает объект по значению переданного PK
         """
-        return cls.q.get(_pk)
+        try:
+            return cls.q.get(_pk)
+        except SQLAlchemyError:
+            cls.s.rollback()
+            raise
 
     @classmethod
     def load_by_params(cls, **_params):
         """
         Возвращает объект по значению переданных пар столбец->значение
         """
-        return cls._prepare_parametrized_queue(**_params).first()
+        try:
+            return cls._prepare_parametrized_queue(**_params).first()
+        except SQLAlchemyError:
+            cls.s.rollback()
+            raise
 
     @classmethod
     def load_or_create(cls, **_params):
         result = cls.load_by_params(**_params)
-        if not result:
-            result = cls.create(**_params)
-        return result
+        try:
+            if not result:
+                result = cls.create(**_params)
+            return result
+        except SQLAlchemyError:
+            cls.s.rollback()
+            raise
 
     @classmethod
     def create(cls, **_params):
         """
         Универсальный метод для создания нового экземпляра модели для последующего присвоения некоторых атрибутов
         и добавления этого экземпляра в БД
-        :return: 
+        :return:
         """
         cls_inst = cls()
         cls_inst = cls_inst.set(**_params)
@@ -287,7 +306,11 @@ class DataMixin(SessionMixin):
                     serialized_data.pop(field)
             return serialized_data
 
-        return model_to_dict(self, list(_except_fields))
+        try:
+            return model_to_dict(self, list(_except_fields))
+        except SQLAlchemyError:
+            self.s.rollback()
+            raise
 
     @classmethod
     def count(cls, **_params):
@@ -299,9 +322,13 @@ class DataMixin(SessionMixin):
                         iz_id=777777,
         :return: число строк, скалярное значение
         """
-        query = cls.s.query(func.count())
-        query = cls._prepare_parametrized_queue(query, **_params)
-        return query.scalar()
+        try:
+            query = cls.s.query(func.count())
+            query = cls._prepare_parametrized_queue(query, **_params)
+            return query.scalar()
+        except SQLAlchemyError:
+            cls.s.rollback()
+            raise
 
     @classmethod
     def all(cls, page: int=0, per_page: int=0, **_params):
@@ -316,40 +343,48 @@ class DataMixin(SessionMixin):
                         iz_id=777777,
         :return: генератор с модельками результата
         """
-        query = cls._prepare_parametrized_queue(**_params)
-        if page != 0 and per_page != 0:
-            query = query.limit(per_page)
-            query = query.offset((page - 1) * per_page)
+        try:
+            query = cls._prepare_parametrized_queue(**_params)
+            if page != 0 and per_page != 0:
+                query = query.limit(per_page)
+                query = query.offset((page - 1) * per_page)
 
-        return query.all()
+            return query.all()
+        except SQLAlchemyError:
+            cls.s.rollback()
+            raise
 
     @classmethod
     def schema(cls, only_self: bool=False):
         """
-        Вовзращает json-схему всех таблиц в базе. Если передан флаг only_self=True то возвращает схему только по 
+        Вовзращает json-схему всех таблиц в базе. Если передан флаг only_self=True то возвращает схему только по
         конкретной таблице (которую берет из класса cls)
-        :param only_self: 
-        :return: 
+        :param only_self:
+        :return:
         """
-        md_tbls = cls.metadata.tables
-        insp = reflection.Inspector.from_engine(cls.s.bind.engine)
-        tbls = dict()
-        for tbl in insp.get_table_names():
-            if not only_self or (only_self and tbl == cls.__tablename__):
-                cols = dict()
-                for col in insp.get_columns(tbl):
-                    info = dict(col)
-                    col_info = md_tbls[tbl].c[col['name']]
-                    info['type'] = {
-                        'compiled': col['type'].compile(),
-                        'native': col['type'].python_type.__name__
-                    }
-                    info['type']['length'] = col['type'].length if hasattr(col['type'], 'length') else None
-                    if info['autoincrement']:
-                        info['default'] = 'autoincrement'
-                    info.update(col_info.info)
-                    info['placeholder'] = '%s_%s' % (tbl, col['name'])
-                    cols[col['name']] = info
-                tbls[tbl] = cols
+        try:
+            md_tbls = cls.metadata.tables
+            insp = reflection.Inspector.from_engine(cls.s.bind.engine)
+            tbls = dict()
+            for tbl in insp.get_table_names():
+                if not only_self or (only_self and tbl == cls.__tablename__):
+                    cols = dict()
+                    for col in insp.get_columns(tbl):
+                        info = dict(col)
+                        col_info = md_tbls[tbl].c[col['name']]
+                        info['type'] = {
+                            'compiled': col['type'].compile(),
+                            'native': col['type'].python_type.__name__
+                        }
+                        info['type']['length'] = col['type'].length if hasattr(col['type'], 'length') else None
+                        if info['autoincrement']:
+                            info['default'] = 'autoincrement'
+                        info.update(col_info.info)
+                        info['placeholder'] = '%s_%s' % (tbl, col['name'])
+                        cols[col['name']] = info
+                    tbls[tbl] = cols
 
-        return tbls
+            return tbls
+        except SQLAlchemyError:
+            cls.s.rollback()
+            raise
