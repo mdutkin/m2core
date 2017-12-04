@@ -4,6 +4,7 @@ from tornado import escape
 from tornado.escape import *
 from tornado.web import HTTPError
 from tornado.web import RequestHandler
+from tornado.netutil import is_valid_ip
 from tornado.options import options
 from m2core.utils.session_helper import SessionHelper
 from m2core.db.sqlalchemy_json import AlchemyJSONEncoder
@@ -67,6 +68,10 @@ class BaseHandler(RequestHandler):
         if options.expire_on_connect:
             self._session.expire_all()
         super(BaseHandler, self).__init__(application, request, **kwargs)
+        # added support for x-forwarded-for header in tornado web logs for client ip
+        forwarded_ip = self.request.headers.get("X-Forwarded-For", self.request.remote_ip)
+        if is_valid_ip(forwarded_ip):
+            self.request.remote_ip = forwarded_ip
 
     def set_default_headers(self):
         """
