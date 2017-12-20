@@ -20,7 +20,8 @@ class DataMixin(SessionMixin):
 
     @classproperty
     def primary_keys_full(cls):
-        """Get primary key properties for a SQLAlchemy cls.
+        """
+        Get primary key properties for a SQLAlchemy cls.
         Taken from marshmallow_sqlalchemy
         """
         mapper = cls.__mapper__
@@ -35,14 +36,16 @@ class DataMixin(SessionMixin):
 
     @classproperty
     def relations(cls):
-        """Return a `list` of relationship names or the given model
+        """
+        Return a `list` of relationship names or the given model
         """
         return [c.key for c in cls.__mapper__.iterate_properties
                 if isinstance(c, RelationshipProperty)]
 
     @classproperty
     def settable_relations(cls):
-        """Return a `list` of relationship names or the given model
+        """
+        Return a `list` of relationship names or the given model
         """
         return [r for r in cls.relations
                 if getattr(cls, r).property.viewonly is False]
@@ -66,9 +69,8 @@ class DataMixin(SessionMixin):
     @classmethod
     def _prepare_parametrized_queue(cls, initial_query=None, **_params):
         """
-        Внутренний метод обработки параметров, переданных в запрос load_all, load_all_with_paginate
-        :param initial_query экземпляр sqlalchemy Query, к которой мы дальше добавим все .filter()
-        :return:
+        Private method for preparing query in method `all`, `load_by_params`, `count`
+        :param initial_query sqlalchemy Query instance, which will be used for `.filter()`
         """
         ops = {
             '>': operator.gt,
@@ -111,10 +113,18 @@ class DataMixin(SessionMixin):
         return cls.columns + cls.hybrid_properties + cls.settable_relations
 
     def set_and_save(self, **_params):
+        """
+        Updates instance and permanently saves changes to DB
+        :param _params: data to save
+        """
         self.set(**_params)
         return self.save()
 
     def set(self, **_params):
+        """
+        Sets fields in instance without saving
+        :param _params: data to save
+        """
         try:
             for name in _params.keys():
                 if name in self.settable_attributes:
@@ -128,9 +138,9 @@ class DataMixin(SessionMixin):
 
     def get(self, item):
         """
-        Универсальный геттер атрибутов из самой sqlalchemy-модели
-        :param item:
-        :return:
+        Universal getter of attributes from sqlaclhemy model instance
+        :param item: key
+        :return: value
         """
         try:
             data = copy.deepcopy(getattr(self, item))
@@ -144,7 +154,7 @@ class DataMixin(SessionMixin):
     @classmethod
     def load_by_pk(cls, _pk):
         """
-        Возвращает объект по значению переданного PK
+        Loads model by primary key
         """
         try:
             return cls.q.get(_pk)
@@ -155,7 +165,7 @@ class DataMixin(SessionMixin):
     @classmethod
     def load_by_params(cls, **_params):
         """
-        Возвращает объект по значению переданных пар столбец->значение
+        Loads model with filtering by params
         """
         try:
             return cls._prepare_parametrized_queue(**_params).first()
@@ -165,6 +175,10 @@ class DataMixin(SessionMixin):
 
     @classmethod
     def load_or_create(cls, **_params):
+        """
+        Loads existing model or creates new with specified params
+        :param _params:
+        """
         result = cls.load_by_params(**_params)
         try:
             if not result:
@@ -177,9 +191,7 @@ class DataMixin(SessionMixin):
     @classmethod
     def create(cls, **_params):
         """
-        Универсальный метод для создания нового экземпляра модели для последующего присвоения некоторых атрибутов
-        и добавления этого экземпляра в БД
-        :return:
+        Universal method for creation new empty model for further attribute settings and saving it to DB
         """
         cls_inst = cls()
         cls_inst = cls_inst.set(**_params)
@@ -188,10 +200,10 @@ class DataMixin(SessionMixin):
 
     def save(self):
         """
-        Сохраняем изменения в БД (если есть поле `updated` - изменяет его значение на текущее время)
+        Saves changes to DB. If there is `updated` field in model - sets it's value to current time
         """
         try:
-            # если есть поле updated - сохраняем его с now()
+            # set `updated` field with current datetime
             if 'updated' in self.columns and self.get('updated') is not None:
                 self.set(updated=text('now()'))
             self.s.add(self)
@@ -202,7 +214,8 @@ class DataMixin(SessionMixin):
             raise
 
     def delete(self):
-        """Removes the model from the current entity session and mark for deletion.
+        """
+        Removes the model from the current entity session and mark for deletion.
         """
         try:
             self.s.delete(self)
@@ -213,21 +226,19 @@ class DataMixin(SessionMixin):
 
     def data(self, *_except_fields):
         """
-        Получить экземлпяр модели. Удобно для использования, например, в хэндлерах, когда мы хотим в json запихнуть
-        всю модель целиком, не исколючая никаких ее атрибутов. А дальше, в self.write_json() сработает
-        AlchemyJSONEncoder, у которого неплохо получается приводить типы данных к типам JSON'а по всем стандартам.
-        В _except_fields можно указать название полей таблицы, которые не должны попасть в итоговую выборку. Например,
-        это может быть `password`
-        можно также дропать поля из итоговой выборки с учетом вложенности, пример:
+        Dumps model to JSON. Also dumps all it's relations.
+        Useful in handlers, where we want to return model in JSON to client.
+        In `_except_fields` you can specify fields, which you don't want to see in an output JSON (i.e. `password`).
+        You can also drop fields from nested models, i.e:
             data('photo_id', '>id', '>author_id')
-        дропнет в следующей выборке:
+        in the data:
             {
                 "email": null,
                 "total_articles": 3,
                 "created": "2017-06-29T16:18:37.389449+00:00",
-                "iz_nick": "Алексей Самойлов",
+                "iz_nick": "User",
                 "creator_id": null,
-                "note": "Был автоматически импортирован (увидели тут: http://iz.ru/news/641888)",
+                "note": "Some notes about user",
                 "updated": "2017-06-29T16:18:37.389449+00:00",
                 "id": 421,
                 "socials": [
@@ -247,7 +258,7 @@ class DataMixin(SessionMixin):
                         "link": "link3"
                     }
                 ],
-                "name": "Алексей Самойлов",
+                "name": "User",
                 "fathername": null,
                 "gender": null,
                 "birthday": null,
@@ -255,7 +266,8 @@ class DataMixin(SessionMixin):
                 "surname": null,
                 "phone": null
             }
-        photo_id, socials>id, socials>author_id
+        will drop:
+            photo_id, socials>id, socials>author_id
         """
 
         def model_to_dict(obj, ignore_fields=list(), visited_children=set(), back_relationships=set()):
@@ -264,8 +276,8 @@ class DataMixin(SessionMixin):
             visitable_relationships = [(name, rel) for name, rel in relationships.items() if
                                        name not in back_relationships and name not in _except_fields]
 
-            # обработаем field. если есть `>` в начале имени поля - значит в текущей функции его не трогаем,
-            # убираем `>` и передаем дальше в рекурсию
+            # prepare field. if there is  `>` in the beginning of field name - exclude it in current iteration,
+            # remove `>` and do another recursion
             ignore_in_cur_iteration = list()
             ignore_in_next_iteration = list()
             for field in ignore_fields:
@@ -315,12 +327,12 @@ class DataMixin(SessionMixin):
     @classmethod
     def count(cls, **_params):
         """
-        Считает кол-во строк в выборке с параметрами средствами sql
-        :param _params: пара поле_таблицы => значение, пример:
+        Counts all rows in query with specified params via SQL
+        :param _params: table_field => value, i.e.:
                         pub_date=(between, '2016-06-22 08:30:00', '2017-06-27 08:30:00'),
                         author_id=('>=', -13),
-                        iz_id=777777,
-        :return: число строк, скалярное значение
+                        user_id=777777,
+        :return: rows count, scalar value
         """
         try:
             query = cls.s.query(func.count())
@@ -333,15 +345,15 @@ class DataMixin(SessionMixin):
     @classmethod
     def all(cls, page: int=0, per_page: int=0, **_params):
         """
-        Просто возвращает все объекты из БД, ничего не записывая в self._data с возможной фильтрацией по параметрам и
-        пагинацией
-        :param page: номер страницы, начиная с 1
-        :param per_page: сколько выводить на странице
-        :param _params: пара поле_таблицы => значение, пример:
+        Simply returns all objects from DB, without initializing self._data and possible filtering by params and
+        pagination
+        :param page: page number, starts with 1
+        :param per_page: page size
+        :param _params: table_field => value, i.e.:
                         pub_date=(between, '2016-06-22 08:30:00', '2017-06-27 08:30:00'),
                         author_id=('>=', -13),
-                        iz_id=777777,
-        :return: генератор с модельками результата
+                        user_id=777777,
+        :return: generator with rows from query result
         """
         try:
             query = cls._prepare_parametrized_queue(**_params)
@@ -357,9 +369,9 @@ class DataMixin(SessionMixin):
     @classmethod
     def schema(cls, only_self: bool=False):
         """
-        Вовзращает json-схему всех таблиц в базе. Если передан флаг only_self=True то возвращает схему только по
-        конкретной таблице (которую берет из класса cls)
-        :param only_self:
+        Returns JSON-scheme of all tables from current DB. If you pass `only_self=True`, it returns only scheme for
+        current table of model, which is taken from `cls`
+        :param only_self: get JSON schema only for current cls
         :return:
         """
         try:
