@@ -5,6 +5,8 @@ import redis
 import tornado.ioloop
 import tornado.web
 import os
+# needed for env initialization
+from m2core.app_env import *
 from m2core.bases.base_model import MetaBase, BaseModel, EnchantedMixin
 from m2core.data_schemes.redis_system_scheme import redis_scheme
 from m2core.data_schemes.db_system_scheme import M2Roles
@@ -14,7 +16,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import QueuePool
-from tornado.options import define, options
+from tornado.options import options
 from tornado.web import HTTPError, RequestHandler
 from tornado.websocket import WebSocketHandler
 from tornado.web import StaticFileHandler
@@ -26,37 +28,6 @@ from m2core.bases.base_handler import http_statuses
 from m2core.utils.permissions import HandlerPermissions
 from m2core.utils.error import M2Error
 
-# project options:
-# - tornado config
-define('debug', default=False, help='Tornado debug mode', type=bool)
-define('debug_orm', default=False, help='SQLAlchemy debug mode', type=bool)
-define('config_name', default='config.py', help='Config name', type=str)
-define('admin_role_name', default='admins', help='Admin group name', type=str)
-define('default_role_name', default='users', help='Default user group with login permissions', type=str)
-define('default_permission', default='authorized', help='Default permission', type=str)
-define('xsrf_cookie', default=False, help='Enable or disable XSRF-cookie protection', type=str)
-define('cookie_secret', default='gfqeg4t023ty724ythweirhgiuwehrtp', type=str)
-define('server_port', default=8888, help='TCP server bind port', type=int)
-define('locale', default='ru_RU.UTF-8', help='Server locale for dates, times, currency and etc', type=str)
-define('log_file', default='/logs.txt', help='Path to log file', type=str)
-define('json_indent', default=2,
-       help='Number of `space` characters, which are used in json responses after new lines', type=int)
-define('thread_pool_size', default=10, help='Pool size for background executor', type=int)
-define('gen_salt', default=12, help='Argument for gen_salt func in bcrypt module', type=int)
-# - database config
-define('pg_host', default='127.0.0.1', help='Database host', type=str)
-define('pg_port', default=5432, help='Database port', type=int)
-define('pg_db', default='m2core', help='Database name', type=str)
-define('pg_user', default='postgres', help='Database user', type=str)
-define('pg_password', default='password', help='Database password', type=str)
-define('pg_pool_size', default=40, help='Pool size for bg executor', type=int)
-define('pg_pool_recycle', default=-1, help='Pool recycle time in sec, -1 - disable', type=int)
-define('expire_on_connect', default=True, help='Expire sqlalchemy inner cache when initializing BaseHandler '
-                                               'for incoming client', type=True)
-# - redis config
-define('redis_host', default='127.0.0.1', help='Redis host', type=str)
-define('redis_port', default=6379, help='Redis port', type=int)
-define('redis_db', default=0, help='Redis database number (0-15)', type=int)
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +203,7 @@ class M2Core:
             permissions=M2Core.handler_permissions,
             thread_pool=self.__thread_pool,
             debug=options.debug,
+            **options.tornado_application_kwargs
         )
 
     def add_endpoint(self, human_route: str, handler_class: Type[RequestHandler], extra_params: dict = dict()):
@@ -485,7 +457,8 @@ class M2Core:
             poolclass=QueuePool,
             pool_size=options.pg_pool_size,
             pool_recycle=options.pg_pool_recycle,
-            echo=options.debug_orm
+            echo=options.debug_orm,
+            **options.engine_kwargs
         )
 
         self.__db_session = scoped_session(
@@ -493,7 +466,8 @@ class M2Core:
                 autoflush=False,
                 autocommit=False,
                 expire_on_commit=True,
-                bind=self.__db_engine
+                bind=self.__db_engine,
+                **options.session_kwargs
             )
         )
 
@@ -515,6 +489,7 @@ class M2Core:
                 port=str(options.redis_port),
                 db=options.redis_db,
                 decode_responses=True,
+                **options.redis_connection_pool_kwargs
             ),
         )
         EnchantedMixin.set_redis_session({
@@ -557,7 +532,11 @@ class M2Core:
         """
         locale.setlocale(locale.LC_TIME, options.locale)
         app = self.__make_app()
-        app.listen(options.server_port)
+        app.listen(
+            options.server_port,
+            address=options.server_listen_ip,
+            **options.http_server_kwargs
+        )
         # write all permissions and roles to DB
         tornado.ioloop.IOLoop.current().add_callback(self.__sync_permissions)
         # dump all permissions and roles to Redis

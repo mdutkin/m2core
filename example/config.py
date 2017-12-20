@@ -9,11 +9,11 @@ locale = 'ru_RU.UTF-8'  # locale for everything
 pg_user = 'm2core'
 pg_db = 'm2core'
 pg_password = 'Password1'
-pg_host = '172.16.10.50'
+pg_host = '192.168.99.100'
 pg_port = 5432
 
 # Redis config
-redis_host = '127.0.0.1'
+redis_host = '192.168.99.100'
 redis_port = 6379
 redis_db = 0
 

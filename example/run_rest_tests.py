@@ -29,7 +29,7 @@ define('test_surname', 'surname')
 define('test_email', 'unitest@m2.group')
 define('test_phone', '+7(111)111-11-11')
 
-options.config_name = 'example/config.py'
+options.config_name = 'config.py'
 m2core = M2Core()
 domain_name = '%s://%s:%s' % (
     options.test_protocol,

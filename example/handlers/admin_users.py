@@ -1,3 +1,4 @@
+import bcrypt
 from m2core.bases.base_handler import BaseHandler, http_statuses
 from m2core.m2core import M2Core
 from m2core.utils.error import M2Error
@@ -124,9 +125,9 @@ class AdminUsersHandler(BaseHandler):
 
         if 'password' in data.keys():
             password = data.pop('password')
-            data['password'] = func.crypt(password, func.gen_salt('bf', options.gen_salt))
-        user.set(**data)
-        user.save()
+            bytes_hash = bcrypt.hashpw(str.encode(password), bcrypt.gensalt(rounds=options.gen_salt))
+            data['password'] = bytes_hash.decode()
+        user.set_and_save(**data)
 
         self.write_json(
             code=http_statuses['CREATED']['code'],
