@@ -26,7 +26,7 @@ define('test_login', 'unittest')
 define('test_password', 'unittest')
 define('test_username', 'name')
 define('test_surname', 'surname')
-define('test_email', 'unitest@m2.group')
+define('test_email', 'unitest@mail.ru')
 define('test_phone', '+7(111)111-11-11')
 
 options.config_name = 'config.py'

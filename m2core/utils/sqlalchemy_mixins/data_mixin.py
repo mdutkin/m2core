@@ -224,19 +224,19 @@ class DataMixin(SessionMixin):
             self.s.rollback()
             raise
 
-    def data(self, *_except_fields):
+    def data(self, *_except_fields, **kwargs):
         """
         Dumps model to JSON. Also dumps all it's relations.
         Useful in handlers, where we want to return model in JSON to client.
         In `_except_fields` you can specify fields, which you don't want to see in an output JSON (i.e. `password`).
         You can also drop fields from nested models, i.e:
-            data('photo_id', '>id', '>author_id')
+            data('photo_id', 'socials>id', 'socials>author_id')
         in the data:
             {
                 "email": null,
                 "total_articles": 3,
                 "created": "2017-06-29T16:18:37.389449+00:00",
-                "iz_nick": "User",
+                "nick": "nick name",
                 "creator_id": null,
                 "note": "Some notes about user",
                 "updated": "2017-06-29T16:18:37.389449+00:00",
@@ -259,7 +259,6 @@ class DataMixin(SessionMixin):
                     }
                 ],
                 "name": "User",
-                "fathername": null,
                 "gender": null,
                 "birthday": null,
                 "photo_id": null,
@@ -268,30 +267,40 @@ class DataMixin(SessionMixin):
             }
         will drop:
             photo_id, socials>id, socials>author_id
+
+        :param kwargs:
+                `max_level` - maximum recursion level, 2 by default
         """
 
-        def model_to_dict(obj, ignore_fields=list(), visited_children=set(), back_relationships=set()):
-            serialized_data = {c.key: getattr(obj, c.key) for c in obj.__table__.columns}
+        _max_level = kwargs.get('max_level', 2)
+
+        def model_to_dict(obj, ignore_fields=list(), back_relationships=set(), max_level=2,
+                          current_level=0):
+            current_level += 1
+            ignore_in_cur_iteration = list()
+            for field in ignore_fields:
+                final_exclusion = len(field) == 1
+                if final_exclusion:
+                    ignore_in_cur_iteration.append(field[0])
+
+            serialized_data = dict()
+            for c in obj.__table__.columns:
+                if c.key not in ignore_in_cur_iteration:
+                    serialized_data[c.key] = getattr(obj, c.key)
             relationships = class_mapper(obj.__class__).relationships
             visitable_relationships = [(name, rel) for name, rel in relationships.items() if
                                        name not in back_relationships and name not in _except_fields]
 
-            # prepare field. if there is  `>` in the beginning of field name - exclude it in current iteration,
-            # remove `>` and do another recursion
-            ignore_in_cur_iteration = list()
-            ignore_in_next_iteration = list()
-            for field in ignore_fields:
-                try:
-                    pos = field.index('>')
-                except ValueError:
-                    pos = len(field)
-
-                if pos == 0:
-                    ignore_in_next_iteration.append(field[1:])
-                else:
-                    ignore_in_cur_iteration.append(field[:pos])
-
             for name, relation in visitable_relationships:
+                ignore_in_next_iteration = list()
+
+                if name in ignore_in_cur_iteration:
+                    continue
+
+                for i in ignore_fields:
+                    if len(i) > 1 and name == i[0]:
+                        ignore_in_next_iteration.append(i[1:])
+
                 if relation.backref:
                     if type(relation.backref) == str:
                         back_relationships.add(relation.backref)
@@ -299,27 +308,30 @@ class DataMixin(SessionMixin):
                         back_relationships.add(relation.backref[0])
                 relationship_children = getattr(obj, name)
                 if relationship_children is not None:
-                    if relation.uselist:
+                    if relation.uselist and current_level != max_level:
                         children = []
-                        for child in [c for c in relationship_children if c not in visited_children]:
-                            visited_children.add(child)
-                            children.append(model_to_dict(child,
-                                                          ignore_in_next_iteration,
-                                                          visited_children,
-                                                          back_relationships))
+                        for child in [c for c in relationship_children]:
+                            if current_level < max_level:
+                                children.append(model_to_dict(child,
+                                                              ignore_in_next_iteration,
+                                                              back_relationships,
+                                                              max_level,
+                                                              current_level))
                         serialized_data[name] = children
                     else:
-                        serialized_data[name] = model_to_dict(relationship_children,
-                                                              ignore_in_next_iteration,
-                                                              visited_children,
-                                                              back_relationships)
-            for field in ignore_in_cur_iteration:
-                if field in serialized_data.keys():
-                    serialized_data.pop(field)
+                        if current_level < max_level:
+                            serialized_data[name] = model_to_dict(relationship_children,
+                                                                  ignore_in_next_iteration,
+                                                                  back_relationships,
+                                                                  max_level,
+                                                                  current_level)
             return serialized_data
 
         try:
-            return model_to_dict(self, list(_except_fields))
+            normalized_except_fields = []
+            for f in _except_fields:
+                normalized_except_fields.append(f.split('>'))
+            return model_to_dict(self, ignore_fields=normalized_except_fields, max_level=_max_level)
         except SQLAlchemyError:
             self.s.rollback()
             raise
