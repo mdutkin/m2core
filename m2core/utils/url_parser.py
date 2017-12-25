@@ -124,7 +124,7 @@ class UrlParserAttr:
 
         if self._attr_type == 'string':
             # take my excuses for concatenation - it's because of the `%` symbol
-            return r'(?P<' + self._attr_name + '>[^/_+?#$%]+)'
+            return r'(?P<' + self._attr_name + '>[^/+?$]+)'
 
     def params(self):
         """
