@@ -8,12 +8,16 @@ from typing import List
 class CreatedMixin(object):
     created = Column(DateTime(timezone=True), server_default=text('now()'), nullable=False)
     updated = Column(DateTime(timezone=True), server_default=text('now()'), nullable=False)
+
+
 CreatedMixin.created._creation_order = 9998
 CreatedMixin.updated._creation_order = 9999
 
 
 class SortMixin(object):
     sort_order = Column(BigInteger, default=0, server_default='0', nullable=False)
+
+
 SortMixin.sort_order._creation_order = 9997
 
 
@@ -59,7 +63,7 @@ class M2Roles(BaseModel):
         """
         try:
             # get all existing and delete them
-            self.s.query(M2RolePermissions).filter(M2RolePermissions.role_id==self.get('id')).delete()
+            self.s.query(M2RolePermissions).filter(M2RolePermissions.role_id == self.get('id')).delete()
             self.s.commit()
             # add new
             for p in permissions:
@@ -87,7 +91,7 @@ class M2RolePermissions(BaseModel):
     role_id = Column(BigInteger, ForeignKey(M2Roles.__table__.c.id, ondelete="CASCADE"), nullable=False)
     permission_id = Column(BigInteger, ForeignKey(M2Permissions.__table__.c.id, ondelete="CASCADE"), nullable=False)
 
-    __table_args__ = (UniqueConstraint('role_id', 'permission_id', name='_m2core_permission_per_role_uq'), )
+    __table_args__ = (UniqueConstraint('role_id', 'permission_id', name='_m2core_permission_per_role_uq'),)
 
 
 class M2UserRoles(BaseModel):

@@ -53,3 +53,4 @@ fabric.properties
 /MANIFEST
 /version.txt
 /config.py
+/example/config_local.py

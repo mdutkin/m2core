@@ -51,18 +51,21 @@ class M2Core:
         def decorated(handler_instance, *args, **kwargs):
             module_name = handler_instance._human_route
             method_permissions = M2Core.handler_permissions.get_handler_method_permissions(module_name, method)
+            # restricted method
             if method_permissions is None:
                 raise HTTPError(http_statuses['METHOD_NOT_ALLOWED']['code'],
                                 http_statuses['METHOD_NOT_ALLOWED']['msg'])
+            # method with no restrictions (permissions) where len == 0 just passes by
             if len(method_permissions):
+                # didn't get user from Redis
                 if not handler_instance.current_user:
                     raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
                                     http_statuses['WRONG_CREDENTIALS']['msg'])
                 user_permissions = handler_instance.current_user['permissions']
-                for _permission in method_permissions:
-                    if _permission not in user_permissions:
-                        raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
-                                        http_statuses['WRONG_CREDENTIALS']['msg'])
+                # user's rights are not enough to get into method
+                if len(set(method_permissions) - set(user_permissions)):
+                    raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
+                                    http_statuses['WRONG_CREDENTIALS']['msg'])
             return handler_method_func(handler_instance, *args, **kwargs)
 
         return decorated

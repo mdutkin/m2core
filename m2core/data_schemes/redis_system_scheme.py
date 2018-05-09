@@ -2,6 +2,8 @@
 minute = 60
 hour = 60 * minute
 day = 24 * hour
+week = 7 * day
+month = 31 * day
 
 redis_scheme = {
     #
@@ -17,15 +19,10 @@ redis_scheme = {
     #           |                 |
     #           |                 |
     #           |                 |
-    #           |                 |         key TTL in Redis (sec)
+    #           |                 |         key TTL in Redis (sec), None - never expire
     #           V                 V                     V
     # mapping between token (key) and user id (value)
-    'ACCESS_TOKENS_BY_HASH': {'prefix': 'at:%s', 'ttl': 3 * day},
-    # mapping of user id and their tokens. we add unique symbols to key and after that we can find all user tokens
-    # by requesting keys by mask `{user_id}_*`
-    'ACCESS_TOKENS_BY_USER_ID': {'prefix': 'uat:%s_%s', 'ttl': 3 * day},
-    # used to search all user tokens made via previous key (ACCESS_TOKENS_BY_USER_ID)
-    'ACCESS_TOKENS_BY_USER_ID_PREFIX_ONLY': {'prefix': 'uat:%s*', 'ttl': 3 * day},
+    'ACCESS_TOKENS_BY_HASH': {'prefix': 'at:%s', 'ttl': None},
     # mapping of user id and his roles
     'USER_ROLES': {'prefix': 'ur:%s', 'ttl': -1},
     # mapping between role id and its permissions

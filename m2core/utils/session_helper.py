@@ -1,4 +1,5 @@
 from m2core.utils.data_helper import DataHelper
+from tornado.options import options
 
 
 class SessionHelper:
@@ -45,11 +46,6 @@ class SessionHelper:
             user_id,
             ex=self._redis_scheme['ACCESS_TOKENS_BY_HASH']['ttl'],
         )
-        self._redis.set(
-            self._redis_scheme['ACCESS_TOKENS_BY_USER_ID']['prefix'] % (user_id, DataHelper.random_char(6).lower()),
-            token,
-            ex=self._redis_scheme['ACCESS_TOKENS_BY_USER_ID']['ttl'],
-        )
 
         self._current_token = token
         self._current_user = user_id
@@ -76,13 +72,6 @@ class SessionHelper:
             self.get_user_id(),
             ex=self._redis_scheme['ACCESS_TOKENS_BY_HASH']['ttl'],
         )
-        self._redis.set(
-            self._redis_scheme['ACCESS_TOKENS_BY_USER_ID']['prefix'] % (self.get_user_id(),
-                                                                        DataHelper.random_char(6).lower()),
-            token,
-            ex=self._redis_scheme['ACCESS_TOKENS_BY_USER_ID']['ttl'],
-        )
-
         self.__delete_token(old_token)
 
         return {
@@ -108,13 +97,6 @@ class SessionHelper:
 
         # delete old token from tokens table
         self._redis.delete(self._redis_scheme['ACCESS_TOKENS_BY_HASH']['prefix'] % token)
-        # and also delete it from user's tokens table
-        for key in self._redis.keys(self._redis_scheme['ACCESS_TOKENS_BY_USER_ID_PREFIX_ONLY']['prefix'] %
-                                    self._current_user):
-            redis_val = self._redis.get(key)
-            if redis_val == token:
-                self._redis.delete(key)
-                break
 
     def dump_role_permissions(self, role_id, permissions):
         """
@@ -164,7 +146,6 @@ class SessionHelper:
     def _check_inited(self):
         """
         Check if instance was inited with user's data or not
-        :return: 
         """
         if not self.__inited:
             raise Exception('Session is not inited')
@@ -173,12 +154,14 @@ class SessionHelper:
         """
         Init current instance with user access token. This is the place were data per user is requested from Redis
         :param _access_token: 
-        :return: 
         """
-        # TODO: update EXP if token is valid or think of re-requesting new AT ?
         redis_val = self._redis.get(
             self._redis_scheme['ACCESS_TOKENS_BY_HASH']['prefix'] % _access_token
         )
+        if options.access_token_update_on_check:
+            # refresh ttl of current access token
+            self._redis.expire(self._redis_scheme['ACCESS_TOKENS_BY_HASH']['prefix'] % _access_token,
+                               self._redis_scheme['ACCESS_TOKENS_BY_HASH']['ttl'])
 
         self._current_user = int(redis_val) if redis_val else None
         self._current_token = _access_token

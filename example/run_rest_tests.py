@@ -29,7 +29,7 @@ define('test_surname', 'surname')
 define('test_email', 'unitest@mail.ru')
 define('test_phone', '+7(111)111-11-11')
 
-options.config_name = 'config.py'
+options.config_name = 'config_local.py'
 m2core = M2Core()
 domain_name = '%s://%s:%s' % (
     options.test_protocol,
@@ -70,10 +70,7 @@ class TestMyREST(unittest.TestCase, RESTTest):
                     'gender': 0
                 }
             })
-            data = json_decode(result)['data']
             if i != 1:
-                test_data.test_users.append(data['id'])
-
                 result1 = self.fetch_data({
                     'method': 'POST',
                     'url': '%s/users/login' % domain_name,
@@ -85,8 +82,10 @@ class TestMyREST(unittest.TestCase, RESTTest):
                         'password': options.test_password,
                     }
                 })
-                at = json_decode(result1)['data']['access_token']
-                print('at: %s %s' % (data['id'], at))
+                data = json_decode(result1)['data']
+                test_data.test_users.append(data)
+                at = data['access_token']
+                print('at: %s %s' % (data['user_info']['id'], at))
 
         user = User.load_by_params(email=options.test_email)
         user.add_role(options.admin_role_name)
@@ -128,11 +127,11 @@ class TestMyREST(unittest.TestCase, RESTTest):
         self.report_completed('test_03_evil_routes')
 
     def test_04_admin_get_and_modify_user(self):
-        for user_id in test_data.test_users:
+        for user in test_data.test_users:
             # get user's info by id (for admins only)
             self.fetch_data({
                 'method': 'GET',
-                'url': '%s/admin/users/%s?access_token=%s' % (domain_name, user_id, test_data.test_access_token),
+                'url': '%s/admin/users/%s?access_token=%s' % (domain_name, user['user_info']['id'], test_data.test_access_token),
                 'codes': [
                     http_statuses['OK']['code'],
                 ],
@@ -140,12 +139,12 @@ class TestMyREST(unittest.TestCase, RESTTest):
             })
             self.fetch_data({
                 'method': 'PUT',
-                'url': '%s/admin/users/%s?access_token=%s' % (domain_name, user_id, test_data.test_access_token),
+                'url': '%s/admin/users/%s?access_token=%s' % (domain_name, user['user_info']['id'], test_data.test_access_token),
                 'codes': [
                     http_statuses['CREATED']['code'],
                 ],
                 'data': {
-                    'name': 'Modified %s' % user_id,
+                    'name': 'Modified %s' % user['user_info']['id'],
                     'password': 'new_cool_pass',
                     'gender': 1
                 }
@@ -155,10 +154,10 @@ class TestMyREST(unittest.TestCase, RESTTest):
 
     def test_05_admin_delete_user(self):
         # delete user by id (for admin only)
-        user_id = test_data.test_users.pop()
+        user = test_data.test_users.pop()
         self.fetch_data({
             'method': 'DELETE',
-            'url': '%s/admin/users/%s?access_token=%s' % (domain_name, user_id, test_data.test_access_token),
+            'url': '%s/admin/users/%s?access_token=%s' % (domain_name, user['user_info']['id'], test_data.test_access_token),
             'codes': [
                 http_statuses['OK']['code'],
             ],
@@ -166,3 +165,50 @@ class TestMyREST(unittest.TestCase, RESTTest):
         })
 
         self.report_completed('test_05_admin_delete_user')
+
+    def test_06_schema(self):
+        # test our special handler
+        result = self.fetch_data({
+            'method': 'GET',
+            'url': '%s/schema.js?access_token=%s' % (domain_name, test_data.test_access_token),
+            'codes': [
+                http_statuses['OK']['code'],
+            ],
+            'data': None
+        })
+        schema = json_decode(result)['data']
+        self.assertEqual(list(schema.keys()), ['user'], msg='Received wrong json')
+        self.assertEqual(list(schema['user'].keys()),
+                         ['id', 'email', 'password', 'name', 'gender', 'created', 'updated'],
+                         msg='Received wrong json')
+
+        self.report_completed('test_06_schema')
+
+    def test_06_restrict_access(self):
+        # get first random user with default roles
+        user = test_data.test_users[0]
+        # on this endpoint you can only get with admin's rights
+        result = self.fetch_data({
+            'method': 'GET',
+            'url': '%s/admin/schema.js?access_token=%s' % (domain_name, user['access_token']),
+            'codes': [
+                http_statuses['WRONG_CREDENTIALS']['code'],
+            ],
+            'data': None
+        })
+        # now with admin token
+        result = self.fetch_data({
+            'method': 'GET',
+            'url': '%s/admin/schema.js?access_token=%s' % (domain_name, test_data.test_access_token),
+            'codes': [
+                http_statuses['OK']['code'],
+            ],
+            'data': None
+        })
+        schema = json_decode(result)['data']
+        self.assertEqual(list(schema.keys()), ['user'], msg='Received wrong json')
+        self.assertEqual(list(schema['user'].keys()),
+                         ['id', 'email', 'password', 'name', 'gender', 'created', 'updated'],
+                         msg='Received wrong json')
+
+        self.report_completed('test_06_schema')

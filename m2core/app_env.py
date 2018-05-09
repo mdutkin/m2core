@@ -46,3 +46,5 @@ define('tornado_application_kwargs', default={}, help='Additional kwargs used wh
        type=dict)
 define('http_server_kwargs', default={'xheaders': True}, help='Additional kwargs used when initializing HTTP server',
        type=dict)
+define('access_token_update_on_check', default=False, help='When checking access token in Redis, resets it\'s TTL to '
+                                                           'default value', type=bool)

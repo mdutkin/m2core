@@ -34,10 +34,10 @@ if __name__ == '__main__':
     human_route = r'/admin/users/:{id:int}'
     m2core.add_endpoint(human_route, AdminUsersHandler)
     # you can add permissions like that
-    m2core.add_endpoint_method_permissions(human_route, 'get', [options.default_permission, 'user_info', 'get'])
+    m2core.add_endpoint_method_permissions(human_route, 'get', [options.default_permission, 'get user info'])
     m2core.add_endpoint_method_permissions(human_route, 'post', None)
-    m2core.add_endpoint_method_permissions(human_route, 'put', [options.default_permission, 'user_info', 'put'])
-    m2core.add_endpoint_method_permissions(human_route, 'delete', [options.default_permission, 'user_info', 'delete'])
+    m2core.add_endpoint_method_permissions(human_route, 'put', [options.default_permission, 'modify user'])
+    m2core.add_endpoint_method_permissions(human_route, 'delete', [options.default_permission, 'delete user'])
 
     human_route = r'/users'
     m2core.add_endpoint(human_route, AdminUsersHandler)
@@ -69,6 +69,10 @@ if __name__ == '__main__':
     human_route = r'/schema.js'
     m2core.add_endpoint(human_route, SchemaHandler)
     m2core.add_endpoint_method_permissions(human_route, 'get', [])
+
+    human_route = r'/admin/schema.js'
+    m2core.add_endpoint(human_route, SchemaHandler)
+    m2core.add_endpoint_method_permissions(human_route, 'get', [options.default_permission, 'admin only'])
 
     # that's the way you can do something non-blocking in background
     @coroutine

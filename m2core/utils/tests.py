@@ -82,7 +82,7 @@ class RESTTest(object):
                     endpoint['url'],
                     method=endpoint['method'],
                     follow_redirects=False,
-                    user_agent='DeliveryBoy Unittests',
+                    user_agent='M2Core Unittests',
                     use_gzip=False,
                     allow_nonstandard_methods=True,
                     connect_timeout=5,
@@ -95,8 +95,9 @@ class RESTTest(object):
         except httpclient.HTTPError as e:
             # HTTPError is raised for non-200 responses; the response
             # can be found in e.response.
-            response = e.response
-            response_code = e.response.code
+            # 599 - Timeout
+            response = e.response if e.code != 599 else None
+            response_code = e.code
         self.assertIn(response_code, endpoint['codes'], 'Received unexpected HTTP-code [%s][%s] from %s' % (
             response_code, endpoint['method'], endpoint['url']))
         http_client.close()
