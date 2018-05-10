@@ -11,12 +11,10 @@ from m2core.bases import http_statuses
 from m2core.utils.tests import RESTTest
 from tornado.options import options
 from tornado.web import HTTPError
-from example.tests.helpers import UserRightsFactory
+from example.tests.helpers import UserRightsFactory, http_server_request_factory
 
-logger = logging.getLogger(__name__)
 
 options.config_name = os.getenv('TEST_CONFIG', 'config_local.py')
-logger.info('Config used for tests: %s' % options.config_name)
 
 m2core = M2Core()
 
@@ -40,7 +38,7 @@ exceptions_list = [
 ]
 
 
-class SampleTryexHandler(MagicMock):
+class SampleTryexHandler(BaseHandler):
     def do_something_with_exception(self):
         pass
 
@@ -76,6 +74,8 @@ human_route = r'/admin'
 m2core.add_endpoint(human_route, SamplePermissionsHandler)
 m2core.add_endpoint_method_permissions(human_route, 'get', UserRightsFactory.admin_permissions)
 
+app = m2core.run_for_test()
+
 
 class DecoratorsTest(unittest.TestCase, RESTTest):
 
@@ -83,7 +83,8 @@ class DecoratorsTest(unittest.TestCase, RESTTest):
         pass
 
     def test_tryex(self):
-        sth = SampleTryexHandler()
+        sth = SampleTryexHandler(app, http_server_request_factory(), human_route='/test', urlparser=MagicMock())
+        sth.write_json = MagicMock()
 
         sth.do_something_with_exception = MagicMock(side_effect=Exception1)
         try:

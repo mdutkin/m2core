@@ -87,7 +87,8 @@ class BaseHandler(RequestHandler):
 
     def validate_url_params(self, params: dict):
         """
-        Additional url validation
+        Additional url validation, pass request method kwargs (wich actially contain parsed
+        url arguments) to this method to check it via generated voluptuous schema
         :param params: 
         :return: 
         """

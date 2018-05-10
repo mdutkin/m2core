@@ -178,6 +178,7 @@ class M2Core:
         self.__handler_docs = dict()  # all docstrings of all methods of all routes
         self.__handler_validators = dict()  # all validators (UrlParser instance) of all methods of all routes
         self.__started = False
+        self.__app = None
 
         # make singleton of thread pool
         self.__make_thread_pool()
@@ -384,6 +385,13 @@ class M2Core:
         """
         return self.__redis_scheme
 
+    @property
+    def app(self) -> tornado.web.Application:
+        """
+        Tornado app instance, it's `None` before initialized in `self.run` or `self.run_with_recreate` method
+        """
+        return self.__app
+
     def __sync_permissions(self):
         """
         Syncs permissions, received from all method of all handlers per each human route during initialization
@@ -534,8 +542,8 @@ class M2Core:
         Launches Tornado web server
         """
         locale.setlocale(locale.LC_TIME, options.locale)
-        app = self.__make_app()
-        app.listen(
+        self.__app = self.__make_app()
+        self.__app.listen(
             options.server_port,
             address=options.server_listen_ip,
             **options.http_server_kwargs
@@ -554,3 +562,13 @@ class M2Core:
         """
         self.__recreate_db()
         self.run()
+
+    def run_for_test(self) -> tornado.web.Application:
+        """
+        USE ONLY FOR TESTING
+        This method creates Tornado app so you can grab it and use for creating instances
+        of your own RequestHandlers!
+        """
+        locale.setlocale(locale.LC_TIME, options.locale)
+        self.__app = self.__make_app()
+        return self.__app
