@@ -1,11 +1,12 @@
 from sqlalchemy import Column, BigInteger, String, Boolean, Integer, ForeignKey, UniqueConstraint, DateTime, text
 from sqlalchemy.exc import SQLAlchemyError
 from m2core.bases.base_model import BaseModel
+from m2core.bases.permissions import Permission
 from m2core.utils.error import M2Error
 from typing import List
 
 
-class CreatedMixin(object):
+class CreatedMixin:
     created = Column(DateTime(timezone=True), server_default=text('now()'), nullable=False)
     updated = Column(DateTime(timezone=True), server_default=text('now()'), nullable=False)
 
@@ -14,11 +15,16 @@ CreatedMixin.created._creation_order = 9998
 CreatedMixin.updated._creation_order = 9999
 
 
-class SortMixin(object):
+class SortMixin:
     sort_order = Column(BigInteger, default=0, server_default='0', nullable=False)
 
 
 SortMixin.sort_order._creation_order = 9997
+
+
+class M2PermissionCheckMixin:
+    def can(self, permission_rule: Permission) -> bool:
+        return permission_rule(self.permissions)
 
 
 class M2Permissions(BaseModel):
