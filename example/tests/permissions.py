@@ -4,7 +4,7 @@ __author__ = 'Maxim Dutkin (max@dutkin.ru)'
 import unittest
 import os
 from m2core import M2Core
-from m2core.bases import Permission, And, Or, Not
+from m2core.bases import Permission, And, Or, Not, PermissionsEnum
 from m2core.data_schemes.db_system_scheme import M2PermissionCheckMixin
 from tornado.options import options
 
@@ -15,8 +15,7 @@ m2core = M2Core()
 app = m2core.run_for_test()
 
 
-class PlatformPerms:
-    AUTHORIZED = Permission('authorized')
+class PlatformPerms(PermissionsEnum):
     Perm1 = Permission('perm 1')
     Perm2 = Permission('perm 2')
     Perm3 = Permission('perm 3')
@@ -34,10 +33,6 @@ class PlatformPerms:
     Perm15 = Permission('perm 15')
     Perm16 = Permission('perm 16')
     Perm17 = Permission('perm 17')
-
-
-for d in dir(PlatformPerms):
-    print(d, type(getattr(PlatformPerms, d)) is Permission)
 
 
 class User(M2PermissionCheckMixin):
@@ -201,3 +196,27 @@ class PermissionsTest(unittest.TestCase):
         self.assertEqual(p.sys_name, sys_name)
         p = Permission(name, custom_sys_name)
         self.assertEqual(p.sys_name, custom_sys_name)
+
+    def test_permissions_enum_all(self):
+        result = PlatformPerms.all
+        expected_result = [
+            PlatformPerms.AUTHORIZED,
+            PlatformPerms.Perm1,
+            PlatformPerms.Perm10,
+            PlatformPerms.Perm11,
+            PlatformPerms.Perm12,
+            PlatformPerms.Perm13,
+            PlatformPerms.Perm14,
+            PlatformPerms.Perm15,
+            PlatformPerms.Perm16,
+            PlatformPerms.Perm17,
+            PlatformPerms.Perm2,
+            PlatformPerms.Perm3,
+            PlatformPerms.Perm4,
+            PlatformPerms.Perm5,
+            PlatformPerms.Perm6,
+            PlatformPerms.Perm7,
+            PlatformPerms.Perm8,
+            PlatformPerms.Perm9,
+        ]
+        self.assertEqual(result, expected_result)

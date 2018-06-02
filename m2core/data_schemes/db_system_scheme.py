@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, Boolean, Integer, ForeignKey, UniqueConstraint, DateTime, text
+from sqlalchemy import Column, BigInteger, String, Boolean, ForeignKey, UniqueConstraint, DateTime, text
 from sqlalchemy.exc import SQLAlchemyError
 from m2core.bases.base_model import BaseModel
 from m2core.bases.permissions import Permission

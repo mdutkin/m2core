@@ -2,6 +2,7 @@ __author__ = 'Maxim Dutkin (max@dutkin.ru)'
 
 
 import re
+from ..utils.sqlalchemy_mixins.decorators import classproperty
 
 
 class BasePermissionRule(list):
@@ -68,11 +69,12 @@ class Not(BasePermissionRule):
 
 
 class Permission:
-    def __init__(self, name: str=None, sys_name: str=None):
+    def __init__(self, name: str=None, sys_name: str=None, description: str=None):
         if name is None or not len(name):
             raise AttributeError('`name` param should not be `None` or it\'s length should be > 0')
         self._name = name
         self._sys_name = sys_name
+        self._description = description
         self.rule_chain = None
 
     @property
@@ -82,6 +84,10 @@ class Permission:
     @property
     def name(self):
         return self._name
+
+    @property
+    def description(self):
+        return self._description
 
     def copy(self):
         return Permission(name=self._name, sys_name=self._sys_name)
@@ -131,3 +137,21 @@ class Permission:
 
     def __repr__(self):
         return f'<{self.__class__.__name__}.{self.sys_name}>'
+
+
+class PermissionsEnum:
+    AUTHORIZED = Permission('authorized')
+
+    @classproperty
+    def all(cls):
+        cache_var_name = '__all_cache'
+        cached_perms = getattr(cls, cache_var_name, None)
+        if cached_perms is None:
+            setattr(cls, cache_var_name, list())
+            cached_perms = getattr(cls, cache_var_name)
+            for attr_name in dir(cls):
+                if not attr_name.startswith('_') and attr_name != 'all':
+                    attr = getattr(cls, attr_name)
+                    if type(attr) is Permission:
+                        cached_perms.append(attr)
+        return cached_perms
