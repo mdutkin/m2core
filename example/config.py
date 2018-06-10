@@ -6,9 +6,9 @@ cookie_secret = 'g7892gryo8g348tgo34gtgreglwjeg48t2o3gweiouti2uo3gog'
 locale = 'ru_RU.UTF-8'  # locale for everything
 
 # SQL config
-pg_user = 'm2core'
-pg_db = 'm2core'
-pg_password = 'Password1'
+pg_user = 'postgres'
+pg_db = 'mcapp'
+pg_password = 'mysecretpassword'
 pg_host = '192.168.99.100'
 pg_port = 5432
 

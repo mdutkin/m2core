@@ -2,7 +2,6 @@ __author__ = 'Maxim Dutkin (max@dutkin.ru)'
 
 
 import unittest
-import logging
 import os
 from unittest.mock import MagicMock
 from m2core import M2Core

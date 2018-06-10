@@ -53,28 +53,47 @@ class BaseHandler(RequestHandler):
         :param request: 
         :param kwargs: 
         """
-        self._redis = application.settings['redis']
-        self._session = application.settings['db']
-        self._endpoints = application.settings['endpoints']
-        self._handler_docs = application.settings['handler_docs']
-        self._handler_validators = application.settings['handler_validators']
-        self._custom_response_headers = application.settings['custom_response_headers']
-        self._permissions = application.settings['permissions']
-        self._thread_pool = application.settings['thread_pool']
-        self._url_parser = lambda x: True
-        self._human_route = ''
-        """Expire sql alchemy inner cache when initializing BaseHandler for incoming client"""
+        # all protected attributes have been left there for compatibility
+        self.redis_schema = application.settings['redis']['scheme']
+        self.redis_connector = application.settings['redis']['connector']
+        self.db_session = application.settings['db']
+        self.executor = application.settings['thread_pool']
+        self.permissions = application.settings['permissions']
+        self.url_parser = None
+        self.human_route = None
+        # Expire sql alchemy inner cache when initializing BaseHandler for incoming client
         if options.expire_on_connect:
-            self._session.expire_all()
+            self.db_session.expire_all()
         super(BaseHandler, self).__init__(application, request, **kwargs)
+
+    @property
+    def handler_docs(self):
+        """
+        Handler docs dict related to this instance of handler
+        """
+        return self.application.settings['handler_docs'].get(self.human_route, {})
+
+    @property
+    def handler_permissions(self):
+        """
+        Handler permissions dict related to this instance of handler
+        """
+        return self.permissions.get_all_handler_settings().get(self.human_route, {})
+
+    @property
+    def handler_validators(self):
+        """
+        Handler validators related to this instance of handler
+        """
+        return self.application.settings['handler_validators'].get(self.human_route, {})
 
     def set_default_headers(self):
         """
         Mixin some additional headers (CORS i.e.) if there are any
         :return: 
         """
-        for header in self._custom_response_headers.keys():
-            self.set_header(header, self._custom_response_headers[header])
+        for header, value in self.application.settings['custom_response_headers'].items():
+            self.set_header(header, value)
 
     def initialize(self, **kwargs):
         """
@@ -82,17 +101,17 @@ class BaseHandler(RequestHandler):
         :param kwargs: 
         :return: 
         """
-        self._human_route = kwargs['human_route']
-        self._url_parser = kwargs['urlparser']
+        self.human_route = kwargs['human_route']
+        self.url_parser = kwargs['urlparser']
 
     def validate_url_params(self, params: dict):
         """
-        Additional url validation, pass request method kwargs (wich actially contain parsed
+        Additional url validation, pass request method kwargs (which actually contains parsed
         url arguments) to this method to check it via generated voluptuous schema
         :param params: 
         :return: 
         """
-        self._url_parser.validator_schema()(params)
+        self.url_parser.validator_schema()(params)
 
     def get(self, *args, **kwargs):
         """
@@ -190,7 +209,7 @@ class BaseHandler(RequestHandler):
         if not token:
             return None
 
-        session = SessionHelper(self._redis['connector'], self._redis['scheme'])
+        session = SessionHelper(self.redis_connector, self.redis_schema)
         session.init_user(token)
         return {
             'id': session.get_user_id(),
@@ -203,7 +222,7 @@ class BaseHandler(RequestHandler):
         This helper needed to interact with redis to store and get permissions data
         :return: 
         """
-        session_helper = SessionHelper(self._redis['connector'], self._redis['scheme'])
+        session_helper = SessionHelper(self.redis_connector, self.redis_schema)
         if self.current_user:
             session_helper.init_user(self.current_user['access_token'])
         return session_helper

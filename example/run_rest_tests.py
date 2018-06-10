@@ -12,6 +12,7 @@ from example.models import User
 class SomeData:
     pass
 
+
 test_data = SomeData()
 test_data.test_access_token = None  # access token for REST requests
 test_data.users_count = 3  # amount of test users to create
@@ -21,7 +22,7 @@ test_data.test_users = list()  # test users list
 # unit testing config
 define('test_server', 'm2core.loc')
 define('test_protocol', 'http')
-define('test_port', 9999)
+define('test_port', 8888)
 define('test_login', 'unittest')
 define('test_password', 'unittest')
 define('test_username', 'name')

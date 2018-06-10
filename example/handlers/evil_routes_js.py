@@ -19,13 +19,12 @@ class EvilRoutesHandler(BaseHandler):
     def get(self, *args, **kwargs):
         """Returns a list of all endpoints with its method where user is allowed to pass"""
         me = self.current_user
-        permitted_handlers = self._permissions.get_all_permitted_handlers(me['permissions'])
+        permitted_handlers = self.application.settings['permissions'].get_all_permitted_handlers(me['permissions'])
         data = dict()
         for human_route in permitted_handlers.keys():
             data[human_route] = dict()
-            data[human_route]['url_params'] = self._handler_validators[human_route].params()
+            data[human_route]['url_params'] = self.application.settings['handler_validators'][human_route].params()
             data[human_route]['methods'] = dict()
             for method in permitted_handlers[human_route]:
-                data[human_route]['methods'][method] = self._handler_docs[human_route][method]
-
+                data[human_route]['methods'][method] = self.application.settings['handler_docs'][human_route][method]
         self.write_json(data=data)

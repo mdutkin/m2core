@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     human_route = r'/evil_routes.js'
     m2core.add_endpoint(human_route, EvilRoutesHandler)
-    m2core.add_endpoint_method_permissions(human_route, 'get', [options.default_permission, ])
+    m2core.add_endpoint_method_permissions(human_route, 'get', [])
 
     human_route = r'/schema.js'
     m2core.add_endpoint(human_route, SchemaHandler)

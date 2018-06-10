@@ -5,6 +5,7 @@ import redis
 import tornado.ioloop
 import tornado.web
 import os
+import warnings
 # needed for env initialization
 from m2core.app_env import *
 from m2core.bases.base_model import MetaBase, BaseModel, EnchantedMixin
@@ -42,6 +43,9 @@ class M2Core:
         It means you can have the same handler `ExampleHandler` with `GET` method, use it with different routes
         and set different permissions on each `GET` on each route. Cool, isn't it?
         """
+        warnings.warn('The `requires_permission` decorator is deprecated, use `user_can` decorator instead though it '
+                      'works with new permissions realisation',
+                      DeprecationWarning)
         # TODO: maybe add check function support in arguments ? and pass user and handler data here
         # get handler name and method name
         func_info = handler_method_func.__qualname__.split('.')
@@ -49,7 +53,7 @@ class M2Core:
 
         @functools.wraps(handler_method_func)
         def decorated(handler_instance, *args, **kwargs):
-            module_name = handler_instance._human_route
+            module_name = handler_instance.human_route
             method_permissions = M2Core.handler_permissions.get_handler_method_permissions(module_name, method)
             # restricted method
             if method_permissions is None:
@@ -67,6 +71,16 @@ class M2Core:
                     raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
                                     http_statuses['WRONG_CREDENTIALS']['msg'])
             return handler_method_func(handler_instance, *args, **kwargs)
+
+        return decorated
+
+    @staticmethod
+    def user_can(handler_method):
+        raise NotImplemented
+
+        @functools.wraps(handler_method)
+        def decorated(handler_instance, *args, **kwargs):
+            return handler_method(handler_instance, *args, **kwargs)
 
         return decorated
 
@@ -554,7 +568,10 @@ class M2Core:
         tornado.ioloop.IOLoop.current().add_callback(self.__dump_roles)
         self.__started = True
         logger.info('Starting M2Core...')
-        tornado.ioloop.IOLoop.current().start()
+        try:
+            tornado.ioloop.IOLoop.current().start()
+        except KeyboardInterrupt:
+            pass
 
     def run_with_recreate(self):
         """
