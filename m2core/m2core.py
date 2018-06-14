@@ -1,3 +1,6 @@
+__author__ = 'Maxim Dutkin (max@dutkin.ru)'
+
+
 import functools
 import locale
 import logging
@@ -8,12 +11,14 @@ import os
 import warnings
 # needed for env initialization
 from m2core.app_env import *
-from m2core.bases.base_model import MetaBase, BaseModel, EnchantedMixin
+from m2core.bases.base_model import MetaBase, EnchantedMixin
+from m2core.common.permissions import Permission, PermissionsEnum
+from m2core.common.rules import Rules
 from m2core.data_schemes.redis_system_scheme import redis_scheme
 from m2core.data_schemes.db_system_scheme import M2Roles
 from m2core.data_schemes.db_system_scheme import M2RolePermissions
 from m2core.data_schemes.db_system_scheme import M2Permissions
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import QueuePool
@@ -76,11 +81,35 @@ class M2Core:
 
     @staticmethod
     def user_can(handler_method):
-        raise NotImplemented
+        # get handler name and method name
+        func_info = handler_method.__qualname__.split('.')
+        method = func_info[1]
 
         @functools.wraps(handler_method)
         def decorated(handler_instance, *args, **kwargs):
-            return handler_method(handler_instance, *args, **kwargs)
+            module_name = handler_instance.human_route
+            permissions = M2Core.handler_permissions.get_handler_method_permissions(module_name, method)
+            # restricted method
+            if permissions is None:
+                raise HTTPError(http_statuses['METHOD_NOT_ALLOWED']['code'],
+                                http_statuses['METHOD_NOT_ALLOWED']['msg'])
+            # method with no restrictions where `permissions == PermissionsEnum.skip`
+            if type(permissions) is bool and permissions is True:
+                return handler_method(handler_instance, *args, **kwargs)
+
+            if type(permissions) is Permission:
+                # didn't get user from Redis
+                if not handler_instance.current_user:
+                    raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
+                                    http_statuses['WRONG_CREDENTIALS']['msg'])
+
+                check_result = permissions(handler_instance.current_user['permissions'])
+                if check_result:
+                    return handler_method(handler_instance, *args, **kwargs)
+                else:
+                    # user's rights are not enough to get into method
+                    raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
+                                    http_statuses['WRONG_CREDENTIALS']['msg'])
 
         return decorated
 
@@ -191,6 +220,7 @@ class M2Core:
         self.__endpoints = list()  # list of Tornado routes with handler classes, permissions
         self.__handler_docs = dict()  # all docstrings of all methods of all routes
         self.__handler_validators = dict()  # all validators (UrlParser instance) of all methods of all routes
+        self.rules = Rules(lambda: {'validator': None, 'docs': {}, 'permissions': {}, 'group': None})
         self.__started = False
         self.__app = None
 
@@ -223,6 +253,56 @@ class M2Core:
             debug=options.debug,
             **options.tornado_application_kwargs
         )
+
+    def route(self, human_route: str=None, handler_cls: Type[RequestHandler]=None, rule_group: str=None,
+              extra: dict=None, **kwargs):
+        if self.__started:
+            raise RuntimeError('You can\'t add endpoints when app is already started')
+        if human_route is None:
+            raise M2Error('`human_route` parameter can\'t be an empty string')
+        if handler_cls is None or not issubclass(handler_cls, RequestHandler):
+            raise M2Error('`handler_cls` parameter must be inherited from `RequestHandler`')
+
+        for k, v in kwargs.items():
+            if k.upper() not in handler_cls.SUPPORTED_METHODS:
+                raise M2Error('method name must be in `RequestHandler.SUPPORTED_METHODS`')
+
+        url_parser = self.rules.add_meta(human_route, handler_cls, rule_group, kwargs)
+        tornado_route = url_parser.tornado_url()
+
+        # hack for some Tornado builtin Handlers
+        if issubclass(handler_cls, WebSocketHandler) and not self.rules.docs(human_route, 'GET'):
+            # specially for WebSocketHandler we have to add GET method, because it's required for WS protocol
+            self.rules[human_route]['GET'] = 'Builtin method for WebSocket proto'
+
+        elif issubclass(handler_cls, StaticFileHandler) and not self.rules.docs(human_route, 'GET'):
+            # specially for StaticFileHandler we have to add GET method
+            self.rules[human_route]['GET'] = 'Builtin method for StaticFileHandler'
+
+        tornado_handler_params = {
+            'human_route': human_route,
+            'url_parser': url_parser,
+        }
+        if extra:
+            tornado_handler_params.update(extra)
+
+        if StaticFileHandler in handler_cls.__bases__ or StaticFileHandler == handler_cls:
+            # for StaticFileHandler we have to reduce kwargs because of its initialize method
+            self.__endpoints.append(
+                (
+                    tornado_route,
+                    handler_cls,
+                    extra
+                )
+            )
+        else:
+            self.__endpoints.append(
+                (
+                    tornado_route,
+                    handler_cls,
+                    tornado_handler_params
+                )
+            )
 
     def add_endpoint(self, human_route: str, handler_class: Type[RequestHandler], extra_params: dict = dict()):
         """

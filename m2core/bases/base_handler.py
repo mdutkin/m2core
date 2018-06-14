@@ -65,6 +65,13 @@ class BaseHandler(RequestHandler):
         if options.expire_on_connect:
             self.db_session.expire_all()
         super(BaseHandler, self).__init__(application, request, **kwargs)
+        self.after_init()
+
+    def after_init(self):
+        """
+        Called after all __init__ methods, so you can here some custom request processing
+        """
+        pass
 
     @property
     def handler_docs(self):
@@ -102,7 +109,7 @@ class BaseHandler(RequestHandler):
         :return: 
         """
         self.human_route = kwargs['human_route']
-        self.url_parser = kwargs['urlparser']
+        self.url_parser = kwargs['url_parser']
 
     def validate_url_params(self, params: dict):
         """

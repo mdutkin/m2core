@@ -2,7 +2,7 @@ __author__ = 'Maxim Dutkin (max@dutkin.ru)'
 
 
 import re
-from ..utils.sqlalchemy_mixins.decorators import classproperty
+from m2core.utils.sqlalchemy_mixins.decorators import classproperty
 
 
 class BasePermissionRule(list):
@@ -155,3 +155,7 @@ class PermissionsEnum:
                     if type(attr) is Permission:
                         cached_perms.append(attr)
         return cached_perms
+
+    @classproperty
+    def skip(cls):
+        return True

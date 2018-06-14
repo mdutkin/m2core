@@ -1,21 +1,15 @@
 from tornado.options import options
 # import all handlers
 from example.handlers import *
-# import permissions
-from m2core.common import And, Or, Not
-from example.common.permissions import PlatformPermissions
 # import core
 import logging
 from m2core import M2Core, logger as core_logger
 from tornado.gen import coroutine, sleep
 
-
-# INIT M2CORE
-options.config_name = 'config.py'
-m2core = M2Core()
-
-
 if __name__ == '__main__':
+    # INIT M2CORE
+    options.config_name = 'config.py'
+    m2core = M2Core()
 
     # setup core logger level
     core_logger.setLevel(logging.DEBUG)
@@ -23,7 +17,7 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
 
-    # add some headers per every response - CORS in this example
+    # add some headers per every response - CORS
     m2core.add_custom_response_headers({
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,OPTIONS',
@@ -79,15 +73,6 @@ if __name__ == '__main__':
     human_route = r'/admin/schema.js'
     m2core.add_endpoint(human_route, SchemaHandler)
     m2core.add_endpoint_method_permissions(human_route, 'get', [options.default_permission, 'admin only'])
-
-    human_route = r'/test.js'
-    m2core.route(
-        human_route,
-        MyHandler,
-        get=PlatformPermissions.AUTHORIZED & PlatformPermissions.VIEW_SOME_INFO & PlatformPermissions.EDIT_SOME_INFO,
-        post=PlatformPermissions.skip,
-        delete=PlatformPermissions.all
-    )
 
     # that's the way you can do something non-blocking in background
     @coroutine

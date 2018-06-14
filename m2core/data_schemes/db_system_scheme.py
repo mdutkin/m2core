@@ -1,7 +1,7 @@
 from sqlalchemy import Column, BigInteger, String, Boolean, ForeignKey, UniqueConstraint, DateTime, text
 from sqlalchemy.exc import SQLAlchemyError
 from m2core.bases.base_model import BaseModel
-from m2core.bases.permissions import Permission
+from m2core.common.permissions import Permission
 from m2core.utils.error import M2Error
 from typing import List
 
