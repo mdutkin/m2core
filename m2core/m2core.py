@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 class M2Core:
     handler_permissions = HandlerPermissions()
+    rules = Rules(lambda: {'validator': None, 'docs': {}, 'permissions': {}, 'group': None})
 
     @staticmethod
     def requires_permission(handler_method_func):
@@ -82,13 +83,12 @@ class M2Core:
     @staticmethod
     def user_can(handler_method):
         # get handler name and method name
-        func_info = handler_method.__qualname__.split('.')
-        method = func_info[1]
+        method_info = handler_method.__qualname__.split('.')
+        method = method_info[1]
 
         @functools.wraps(handler_method)
         def decorated(handler_instance, *args, **kwargs):
-            module_name = handler_instance.human_route
-            permissions = M2Core.handler_permissions.get_handler_method_permissions(module_name, method)
+            permissions = M2Core.rules.permissions(handler_instance.human_route, method.upper())
             # restricted method
             if permissions is None:
                 raise HTTPError(http_statuses['METHOD_NOT_ALLOWED']['code'],
@@ -97,9 +97,9 @@ class M2Core:
             if type(permissions) is bool and permissions is True:
                 return handler_method(handler_instance, *args, **kwargs)
 
-            if type(permissions) is Permission:
-                # didn't get user from Redis
+            if issubclass(type(permissions), Permission):
                 if not handler_instance.current_user:
+                    # didn't get user from Redis
                     raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
                                     http_statuses['WRONG_CREDENTIALS']['msg'])
 
@@ -220,7 +220,6 @@ class M2Core:
         self.__endpoints = list()  # list of Tornado routes with handler classes, permissions
         self.__handler_docs = dict()  # all docstrings of all methods of all routes
         self.__handler_validators = dict()  # all validators (UrlParser instance) of all methods of all routes
-        self.rules = Rules(lambda: {'validator': None, 'docs': {}, 'permissions': {}, 'group': None})
         self.__started = False
         self.__app = None
 
@@ -267,17 +266,17 @@ class M2Core:
             if k.upper() not in handler_cls.SUPPORTED_METHODS:
                 raise M2Error('method name must be in `RequestHandler.SUPPORTED_METHODS`')
 
-        url_parser = self.rules.add_meta(human_route, handler_cls, rule_group, kwargs)
+        url_parser = M2Core.rules.add_meta(human_route, handler_cls, rule_group, kwargs)
         tornado_route = url_parser.tornado_url()
 
         # hack for some Tornado builtin Handlers
-        if issubclass(handler_cls, WebSocketHandler) and not self.rules.docs(human_route, 'GET'):
+        if issubclass(handler_cls, WebSocketHandler) and not M2Core.rules.docs(human_route, 'GET'):
             # specially for WebSocketHandler we have to add GET method, because it's required for WS protocol
-            self.rules[human_route]['GET'] = 'Builtin method for WebSocket proto'
+            M2Core.rules[human_route]['GET'] = 'Builtin method for WebSocket proto'
 
-        elif issubclass(handler_cls, StaticFileHandler) and not self.rules.docs(human_route, 'GET'):
+        elif issubclass(handler_cls, StaticFileHandler) and not M2Core.rules.docs(human_route, 'GET'):
             # specially for StaticFileHandler we have to add GET method
-            self.rules[human_route]['GET'] = 'Builtin method for StaticFileHandler'
+            M2Core.rules[human_route]['GET'] = 'Builtin method for StaticFileHandler'
 
         tornado_handler_params = {
             'human_route': human_route,
@@ -286,7 +285,7 @@ class M2Core:
         if extra:
             tornado_handler_params.update(extra)
 
-        if StaticFileHandler in handler_cls.__bases__ or StaticFileHandler == handler_cls:
+        if issubclass(handler_cls, StaticFileHandler):
             # for StaticFileHandler we have to reduce kwargs because of its initialize method
             self.__endpoints.append(
                 (
@@ -486,72 +485,6 @@ class M2Core:
         """
         return self.__app
 
-    def __sync_permissions(self):
-        """
-        Syncs permissions, received from all method of all handlers per each human route during initialization
-        and stores them in DB, also with caching them in Redis
-        """
-        # load or create default admin role
-        admin_role = M2Roles.load_by_params(name=options.admin_role_name)
-        # admin group, which holds all new added permissions
-        if not admin_role:
-            # if there is no such group (i.e. - first run) - create it
-            admin_role = M2Roles.load_or_create(
-                name=options.admin_role_name,
-                description='Superuser role with all existing permissions'
-            )
-        # default group for all authorized users
-        default_role = M2Roles.load_by_params(name=options.default_role_name)
-        if not default_role:
-            # if there is no such group (i.e. - first run) - create it
-            default_role = M2Roles.create(
-                name=options.default_role_name,
-                description='Default user role'
-            )
-        M2Core.handler_permissions.add_permission(options.default_role_name)
-        for permission_name in M2Core.handler_permissions.get_all_permissions():
-            permission = M2Permissions.load_by_params(
-                system_name=permission_name
-            )
-            if not permission:
-                permission = M2Permissions.create(
-                    name=permission_name,
-                    system_name=permission_name
-                )
-                M2RolePermissions.create(
-                    role_id=admin_role.get('id'),
-                    permission_id=permission.get('id')
-                )
-                logger.debug('added [%s] permission for admin rule to DB!' % permission)
-            else:
-                M2RolePermissions.load_or_create(
-                    role_id=admin_role.get('id'),
-                    permission_id=permission.get('id')
-                )
-                logger.debug('added [%s] permission for admin rule to DB!' % permission)
-
-        # now we add default permission, which will be added to all newly created users
-        permission = M2Permissions.load_by_params(name=options.default_permission)
-        if not permission:
-            permission = M2Permissions.create(name=options.default_permission, system_name=options.default_permission)
-        M2RolePermissions.load_or_create(
-            role_id=default_role.get('id'),
-            permission_id=permission.get('id')
-        )
-        logger.debug('added [%s] permission for default rule to DB!' % permission)
-
-    def __dump_roles(self):
-        """
-        Caches all permissions of each role to Redis
-        """
-        roles = M2Roles.all()
-        for role in roles:
-            role.dump_role_permissions()
-            logger.debug('dumped role [%s][%s] to Redis!' % (role.get('id'), role.get('name')))
-
-    def __expire_db_session_on_commit(self):
-        print("Commit event")
-
     def __make_db_session(self):
         """
         Creates SQLAlchemy connection pool
@@ -643,9 +576,9 @@ class M2Core:
             **options.http_server_kwargs
         )
         # write all permissions and roles to DB
-        tornado.ioloop.IOLoop.current().add_callback(self.__sync_permissions)
+        tornado.ioloop.IOLoop.current().add_callback(sync_permissions)
         # dump all permissions and roles to Redis
-        tornado.ioloop.IOLoop.current().add_callback(self.__dump_roles)
+        tornado.ioloop.IOLoop.current().add_callback(dump_roles)
         self.__started = True
         logger.info('Starting M2Core...')
         try:
@@ -669,3 +602,95 @@ class M2Core:
         locale.setlocale(locale.LC_TIME, options.locale)
         self.__app = self.__make_app()
         return self.__app
+
+
+def sync_permissions():
+    """
+    Syncs permissions, received from all method of all handlers per each human route during initialization
+    and stores them in DB, also with caching them in Redis
+    """
+    # load or create default admin role
+    admin_role = M2Roles.load_by_params(name=options.admin_role_name)
+    # admin group, which holds all new added permissions
+    if not admin_role:
+        # if there is no such group (i.e. - first run) - create it
+        admin_role = M2Roles.load_or_create(
+            name=options.admin_role_name,
+            description='Superuser role with all existing permissions'
+        )
+    # default group for all authorized users
+    default_role = M2Roles.load_by_params(name=options.default_role_name)
+    if not default_role:
+        # if there is no such group (i.e. - first run) - create it
+        default_role = M2Roles.create(
+            name=options.default_role_name,
+            description='Default user role'
+        )
+    M2Core.handler_permissions.add_permission(options.default_role_name)
+    for permission_name in M2Core.handler_permissions.get_all_permissions():
+        permission = M2Permissions.load_by_params(
+            system_name=permission_name
+        )
+        if not permission:
+            permission = M2Permissions.create(
+                name=permission_name,
+                system_name=permission_name
+            )
+            M2RolePermissions.create(
+                role_id=admin_role.get('id'),
+                permission_id=permission.get('id')
+            )
+            logger.debug('added [%s] permission for admin rule to DB!' % permission)
+        else:
+            M2RolePermissions.load_or_create(
+                role_id=admin_role.get('id'),
+                permission_id=permission.get('id')
+            )
+            logger.debug('added [%s] permission for admin rule to DB!' % permission)
+
+    # now we add default permission, which will be added to all newly created users
+    permission = M2Permissions.load_by_params(name=options.default_permission)
+    if not permission:
+        permission = M2Permissions.create(name=options.default_permission, system_name=options.default_permission)
+    M2RolePermissions.load_or_create(
+        role_id=default_role.get('id'),
+        permission_id=permission.get('id')
+    )
+    logger.debug('added [%s] permission for default rule to DB!' % permission)
+
+    # TODO: complete refactoring
+    # for new permissions model
+    all_perms = PermissionsEnum.all_across_instances
+    for p in all_perms:
+        permission = M2Permissions.load_by_params(
+            system_name=p.sys_name
+        )
+        if not permission:
+            permission = M2Permissions.create(
+                name=p.name,
+                system_name=p.sys_name,
+                description=p.description
+            )
+            # M2RolePermissions.create(
+            #     role_id=admin_role.get('id'),
+            #     permission_id=permission.get('id')
+            # )
+            logger.debug('added %s to DB!' % permission)
+        else:
+            # M2RolePermissions.load_or_create(
+            #     role_id=admin_role.get('id'),
+            #     permission_id=permission.get('id')
+            # )
+            # logger.debug('added [%s] permission for admin rule to DB!' % permission)
+            pass
+
+
+def dump_roles():
+    """
+    Caches all permissions of each role to Redis
+    """
+    # TODO: complete refactoring
+    roles = M2Roles.all()
+    for role in roles:
+        role.dump_role_permissions()
+        logger.debug('dumped role [%s][%s] to Redis!' % (role.get('id'), role.get('name')))

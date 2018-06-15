@@ -28,7 +28,7 @@ class M2PermissionCheckMixin:
 
 
 class M2Permissions(BaseModel):
-    __repr_list__ = ['id', 'name']
+    __repr_list__ = ['id', 'system_name']
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(255))

@@ -4,12 +4,12 @@ __author__ = 'Maxim Dutkin (max@dutkin.ru)'
 import unittest
 import os
 from m2core import M2Core
-from m2core.bases import Permission, And, Or, Not, PermissionsEnum
+from m2core.common import Permission, And, Or, Not, PermissionsEnum
 from m2core.data_schemes.db_system_scheme import M2PermissionCheckMixin
 from tornado.options import options
 
 
-options.config_name = os.getenv('TEST_CONFIG', 'config_local.py')
+options.config_name = os.getenv('TEST_CONFIG', '../config_local.py')
 
 m2core = M2Core()
 app = m2core.run_for_test()
@@ -33,6 +33,14 @@ class PlatformPerms(PermissionsEnum):
     Perm15 = Permission('perm 15')
     Perm16 = Permission('perm 16')
     Perm17 = Permission('perm 17')
+
+
+class AnotherPlatformPerms(PermissionsEnum):
+    Perm18 = Permission('perm 18')
+    Perm19 = Permission('perm 19')
+    Perm20 = Permission('perm 20')
+    Perm21 = Permission('perm 21')
+    Perm22 = Permission('perm 22')
 
 
 class User(M2PermissionCheckMixin):
@@ -199,17 +207,9 @@ class PermissionsTest(unittest.TestCase):
 
     def test_permissions_enum_all(self):
         result = PlatformPerms.all
-        expected_result = [
+        expected_result = {
             PlatformPerms.AUTHORIZED,
             PlatformPerms.Perm1,
-            PlatformPerms.Perm10,
-            PlatformPerms.Perm11,
-            PlatformPerms.Perm12,
-            PlatformPerms.Perm13,
-            PlatformPerms.Perm14,
-            PlatformPerms.Perm15,
-            PlatformPerms.Perm16,
-            PlatformPerms.Perm17,
             PlatformPerms.Perm2,
             PlatformPerms.Perm3,
             PlatformPerms.Perm4,
@@ -218,5 +218,43 @@ class PermissionsTest(unittest.TestCase):
             PlatformPerms.Perm7,
             PlatformPerms.Perm8,
             PlatformPerms.Perm9,
-        ]
-        self.assertEqual(result, expected_result)
+            PlatformPerms.Perm10,
+            PlatformPerms.Perm11,
+            PlatformPerms.Perm12,
+            PlatformPerms.Perm13,
+            PlatformPerms.Perm14,
+            PlatformPerms.Perm15,
+            PlatformPerms.Perm16,
+            PlatformPerms.Perm17,
+        }
+        self.assertEqual(expected_result, result)
+
+    def test_all_across_instances(self):
+        result = PlatformPerms.all_across_instances
+        expected_result = {
+            PlatformPerms.AUTHORIZED,
+            PlatformPerms.Perm1,
+            PlatformPerms.Perm2,
+            PlatformPerms.Perm3,
+            PlatformPerms.Perm4,
+            PlatformPerms.Perm5,
+            PlatformPerms.Perm6,
+            PlatformPerms.Perm7,
+            PlatformPerms.Perm8,
+            PlatformPerms.Perm9,
+            PlatformPerms.Perm10,
+            PlatformPerms.Perm11,
+            PlatformPerms.Perm12,
+            PlatformPerms.Perm13,
+            PlatformPerms.Perm14,
+            PlatformPerms.Perm15,
+            PlatformPerms.Perm16,
+            PlatformPerms.Perm17,
+            AnotherPlatformPerms.Perm18,
+            AnotherPlatformPerms.Perm19,
+            AnotherPlatformPerms.Perm20,
+            AnotherPlatformPerms.Perm21,
+            AnotherPlatformPerms.Perm22,
+        }
+        self.assertEqual(expected_result, result)
+
