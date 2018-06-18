@@ -34,59 +34,67 @@ if __name__ == '__main__':
 
     # ENDPOINTS
     human_route = r'/docs.js'
-    m2core.add_endpoint(human_route, RestApiDocsHandler)
-    m2core.add_endpoint_method_permissions(human_route, 'get', [])
+    m2core.route(human_route, RestApiDocsHandler, get=PlatformPermissions.skip)
 
     human_route = r'/admin/users/:{id:int}'
-    m2core.add_endpoint(human_route, AdminUsersHandler)
-    # you can add permissions like that
-    m2core.add_endpoint_method_permissions(human_route, 'get', [options.default_permission, 'get user info'])
-    m2core.add_endpoint_method_permissions(human_route, 'post', None)
-    m2core.add_endpoint_method_permissions(human_route, 'put', [options.default_permission, 'modify user'])
-    m2core.add_endpoint_method_permissions(human_route, 'delete', [options.default_permission, 'delete user'])
+    m2core.route(
+        human_route,
+        AdminUsersHandler,
+        get=PlatformPermissions.AUTHORIZED & PlatformPermissions.ADMIN,
+        post=None,
+        put=PlatformPermissions.AUTHORIZED & PlatformPermissions.ADMIN,
+        delete=PlatformPermissions.AUTHORIZED & PlatformPermissions.ADMIN
+    )
 
     human_route = r'/users'
-    m2core.add_endpoint(human_route, AdminUsersHandler)
-    # or like that
-    m2core.add_endpoint_permissions(human_route, {
-        'get': None,
-        'post': [],
-        'put': None,
-        'delete': None,
-    })
+    m2core.route(
+        human_route,
+        AdminUsersHandler,
+        get=None,
+        post=PlatformPermissions.skip,
+        put=None,
+        delete=None
+    )
 
     human_route = r'/users/self'
-    m2core.add_endpoint(human_route, AdminUsersHandler)
-    # and that
-    m2core.add_endpoint_permissions(human_route, {
-        'get': [options.default_permission, ],
-        'post': None,
-        'put': [options.default_permission, ],
-        'delete': [options.default_permission, ],
-    })
+    m2core.route(
+        human_route,
+        AdminUsersHandler,
+        get=PlatformPermissions.AUTHORIZED,
+        post=None,
+        put=PlatformPermissions.AUTHORIZED,
+        delete=PlatformPermissions.AUTHORIZED
+    )
 
     human_route = r'/users/login'
-    m2core.add_endpoint(human_route, UsersLoginHandler)
+    m2core.route(human_route, UsersLoginHandler)
 
     human_route = r'/evil_routes.js'
-    m2core.add_endpoint(human_route, EvilRoutesHandler)
-    m2core.add_endpoint_method_permissions(human_route, 'get', [])
+    m2core.route(
+        human_route,
+        EvilRoutesHandler,
+        get=PlatformPermissions.skip
+    )
 
     human_route = r'/schema.js'
-    m2core.add_endpoint(human_route, SchemaHandler)
-    m2core.add_endpoint_method_permissions(human_route, 'get', [])
+    m2core.route(
+        human_route,
+        SchemaHandler,
+        get=PlatformPermissions.skip
+    )
 
     human_route = r'/admin/schema.js'
-    m2core.add_endpoint(human_route, SchemaHandler)
-    m2core.add_endpoint_method_permissions(human_route, 'get', [options.default_permission, 'admin only'])
+    m2core.route(
+        human_route,
+        SchemaHandler,
+        get=PlatformPermissions.ADMIN
+    )
 
     human_route = r'/test.js'
     m2core.route(
         human_route,
         MyHandler,
-        get=PlatformPermissions.AUTHORIZED & PlatformPermissions.VIEW_SOME_INFO & PlatformPermissions.EDIT_SOME_INFO,
-        post=PlatformPermissions.skip,
-        delete=PlatformPermissions.all
+        get=PlatformPermissions.AUTHORIZED & PlatformPermissions.VIEW_SOME_INFO & PlatformPermissions.EDIT_SOME_INFO
     )
 
     # that's the way you can do something non-blocking in background

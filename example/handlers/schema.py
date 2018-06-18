@@ -17,7 +17,7 @@ class SchemaHandler(BaseHandler):
     """Generates JSON-scheme which could be used by front, i.e. your FormGenerator in React SPA"""
     @gen.coroutine
     @M2Core.tryex(*exceptions_list)
-    @M2Core.requires_permission
+    @M2Core.user_can
     def get(self, *args, **kwargs):
         """Generates JSON-scheme of DB models"""
         data = User.schema(True)

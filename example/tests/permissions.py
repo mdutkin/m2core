@@ -230,7 +230,7 @@ class PermissionsTest(unittest.TestCase):
         self.assertEqual(expected_result, result)
 
     def test_all_across_instances(self):
-        result = PlatformPerms.all_across_instances
+        result = PlatformPerms.all_platform_instances
         expected_result = {
             PlatformPerms.AUTHORIZED,
             PlatformPerms.Perm1,

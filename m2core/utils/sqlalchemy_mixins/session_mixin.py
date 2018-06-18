@@ -2,7 +2,6 @@ from redis import StrictRedis
 from sqlalchemy.orm import Session, scoped_session, Query
 from m2core.utils.sqlalchemy_mixins.decorators import classproperty
 from m2core.utils.error import M2Error
-from m2core.utils.session_helper import SessionHelper
 
 
 class SessionMixin:
@@ -50,7 +49,14 @@ class SessionMixin:
         """
         if not cls.r:
             raise M2Error('No Redis session defined')
-        return SessionHelper(cls.r['connector'], cls.r['scheme'])
+        return cls._sh_cls(cls.r['connector'], cls.r['scheme'])
+
+    @classmethod
+    def set_sh(cls, sh_cls):
+        """
+        Sets DB Session during M2Core initialization with this method
+        """
+        cls._sh_cls = sh_cls
 
     @classproperty
     def q(cls) -> Query:

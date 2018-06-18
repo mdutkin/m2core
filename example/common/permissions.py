@@ -26,3 +26,8 @@ class PlatformPermissions(PermissionsEnum):
         sys_name='delete_some_info',
         description='Example of some delete permissions'
     )
+    ADMIN = Permission(
+        name='Admin privilege',
+        sys_name='admin',
+        description='Example of admin (super user) permissions'
+    )

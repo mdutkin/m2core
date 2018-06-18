@@ -16,7 +16,7 @@ class MyHandler(BaseHandler):
     New permissions testing
     """
     @gen.coroutine
-    # @M2Core.tryex(*exceptions_list)
+    @M2Core.tryex(*exceptions_list)
     @M2Core.user_can
     def get(self, *args, **kwargs):
         """Returns a list of all endpoints with its method where user is allowed to pass"""

@@ -141,7 +141,10 @@ class Permission:
         return result_perm
 
     def __call__(self, user_permissions):
-        return self.rule_chain(user_permissions)
+        if self.rule_chain is None:
+            return self in user_permissions
+        else:
+            return self.rule_chain(user_permissions)
 
     def __repr__(self):
         if self.rule_chain:
@@ -169,10 +172,10 @@ class PermissionsEnum:
 
     @classproperty
     def skip(cls):
-        return True
+        return lambda p: True
 
     @classproperty
-    def all_across_instances(cls):
+    def all_platform_instances(cls):
         sub_classes = PermissionsEnum.__subclasses__()
         all_perms = set()
         for c in sub_classes:

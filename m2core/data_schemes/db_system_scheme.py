@@ -1,7 +1,7 @@
 from sqlalchemy import Column, BigInteger, String, Boolean, ForeignKey, UniqueConstraint, DateTime, text
 from sqlalchemy.exc import SQLAlchemyError
 from m2core.bases.base_model import BaseModel
-from m2core.common.permissions import Permission
+from m2core.common.permissions import Permission, PermissionsEnum
 from m2core.utils.error import M2Error
 from typing import List
 
@@ -37,8 +37,23 @@ class M2Permissions(BaseModel):
     active = Column(Boolean, default=True, server_default='1')
     created = Column(DateTime(timezone=True), server_default=text('now()'), nullable=False)
 
+    @property
+    def enum_member(self):
+        if not hasattr(self, '__enum_member'):
+            all_perms = PermissionsEnum.all_platform_instances
+            sys_name = self.system_name
+            for p in all_perms:
+                if p.sys_name == sys_name:
+                    setattr(self, '__enum_member', p)
+                    return p
+            raise M2Error(f'No corresponding enum member found for permission.sys_name=`{sys_name}`')
+        else:
+            return getattr(self, '__enum_member')
+
 
 class M2Roles(BaseModel):
+    __repr_list__ = ['id', 'name']
+
     id = Column(BigInteger, primary_key=True)
     name = Column(String(255), unique=True)
     description = Column(String(500))

@@ -15,7 +15,7 @@ class RestApiDocsHandler(BaseHandler):
     """Returns docstrings per each method of each `human route`"""
     @gen.coroutine
     @M2Core.tryex(*exceptions_list)
-    @M2Core.requires_permission
+    @M2Core.user_can
     def get(self, *args, **kwargs):
         """Description of `GET` method"""
         self.validate_url_params(kwargs)

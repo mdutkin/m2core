@@ -1,5 +1,6 @@
 from m2core.bases.base_handler import BaseHandler, http_statuses
 from m2core.m2core import M2Core
+from collections import defaultdict
 from tornado import gen
 from json.decoder import JSONDecodeError
 from sqlalchemy import exc
@@ -15,16 +16,14 @@ class EvilRoutesHandler(BaseHandler):
     """Accessible by /evil_routes.js. Returns a list of all endpoints with its method where user is allowed to pass"""
     @gen.coroutine
     @M2Core.tryex(*exceptions_list)
-    @M2Core.requires_permission
+    @M2Core.user_can
     def get(self, *args, **kwargs):
         """Returns a list of all endpoints with its method where user is allowed to pass"""
         me = self.current_user
-        permitted_handlers = self.application.settings['permissions'].get_all_permitted_handlers(me['permissions'])
-        data = dict()
-        for human_route in permitted_handlers.keys():
-            data[human_route] = dict()
-            data[human_route]['url_params'] = self.application.settings['handler_validators'][human_route].params()
-            data[human_route]['methods'] = dict()
-            for method in permitted_handlers[human_route]:
-                data[human_route]['methods'][method] = self.application.settings['handler_docs'][human_route][method]
-        self.write_json(data=data)
+
+        allowed_routes = defaultdict(list)
+        for human_route, route in M2Core.rules.items():
+            for method, p in route['permissions'].items():
+                if p is not None and p(me['permissions']):
+                    allowed_routes[human_route].append(method)
+        self.write_json(data=allowed_routes)

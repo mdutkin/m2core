@@ -30,6 +30,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Type
 from voluptuous.error import Error as VoluptuousError
 from m2core.utils.url_parser import UrlParser
+from m2core.utils.session_helper import SessionHelper
 from m2core.bases.base_handler import http_statuses
 from m2core.utils.permissions import HandlerPermissions
 from m2core.utils.error import M2Error
@@ -93,23 +94,29 @@ class M2Core:
             if permissions is None:
                 raise HTTPError(http_statuses['METHOD_NOT_ALLOWED']['code'],
                                 http_statuses['METHOD_NOT_ALLOWED']['msg'])
-            # method with no restrictions where `permissions == PermissionsEnum.skip`
-            if type(permissions) is bool and permissions is True:
-                return handler_method(handler_instance, *args, **kwargs)
 
-            if issubclass(type(permissions), Permission):
+            if issubclass(type(permissions), Permission) or callable(permissions):
+                # didn't get user from Redis
                 if not handler_instance.current_user:
-                    # didn't get user from Redis
-                    raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
-                                    http_statuses['WRONG_CREDENTIALS']['msg'])
+                    # maybe it's permissions == PermissionsEnum.skip?
+                    if permissions({}):
+                        return handler_method(handler_instance, *args, **kwargs)
+                    else:
+                        raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
+                                        http_statuses['WRONG_CREDENTIALS']['msg'])
 
-                check_result = permissions(handler_instance.current_user['permissions'])
+                user_generic_perms = {p.enum_member for p in handler_instance.current_user['permissions']}
+
+                check_result = permissions(user_generic_perms)
                 if check_result:
                     return handler_method(handler_instance, *args, **kwargs)
                 else:
                     # user's rights are not enough to get into method
                     raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
                                     http_statuses['WRONG_CREDENTIALS']['msg'])
+            else:
+                raise HTTPError(http_statuses['SRV_INTERNAL_ERR'],
+                                'Handler permissions must be instance of `Permissions` or `callable`')
 
         return decorated
 
@@ -263,6 +270,10 @@ class M2Core:
             raise M2Error('`handler_cls` parameter must be inherited from `RequestHandler`')
 
         for k, v in kwargs.items():
+            if k.lower() not in handler_cls.__dict__:
+                raise AttributeError('Trying to add permissions on non-existent method `%s` or route `%s`' %
+                                     (k.lower(), human_route))
+
             if k.upper() not in handler_cls.SUPPORTED_METHODS:
                 raise M2Error('method name must be in `RequestHandler.SUPPORTED_METHODS`')
 
@@ -362,7 +373,7 @@ class M2Core:
 
         tornado_handler_params = {
             'human_route': human_route,
-            'urlparser': url_parser,
+            'url_parser': url_parser,
         }
         tornado_handler_params.update(extra_params)
 
@@ -510,6 +521,7 @@ class M2Core:
         )
 
         EnchantedMixin.set_db_session(self.__db_session)
+        EnchantedMixin.set_sh(SessionHelper)
 
     def __make_thread_pool(self):
         """
@@ -626,27 +638,6 @@ def sync_permissions():
             name=options.default_role_name,
             description='Default user role'
         )
-    M2Core.handler_permissions.add_permission(options.default_role_name)
-    for permission_name in M2Core.handler_permissions.get_all_permissions():
-        permission = M2Permissions.load_by_params(
-            system_name=permission_name
-        )
-        if not permission:
-            permission = M2Permissions.create(
-                name=permission_name,
-                system_name=permission_name
-            )
-            M2RolePermissions.create(
-                role_id=admin_role.get('id'),
-                permission_id=permission.get('id')
-            )
-            logger.debug('added [%s] permission for admin rule to DB!' % permission)
-        else:
-            M2RolePermissions.load_or_create(
-                role_id=admin_role.get('id'),
-                permission_id=permission.get('id')
-            )
-            logger.debug('added [%s] permission for admin rule to DB!' % permission)
 
     # now we add default permission, which will be added to all newly created users
     permission = M2Permissions.load_by_params(name=options.default_permission)
@@ -656,11 +647,10 @@ def sync_permissions():
         role_id=default_role.get('id'),
         permission_id=permission.get('id')
     )
-    logger.debug('added [%s] permission for default rule to DB!' % permission)
+    logger.debug(f'added {permission} for `default` role to DB')
 
-    # TODO: complete refactoring
     # for new permissions model
-    all_perms = PermissionsEnum.all_across_instances
+    all_perms = PermissionsEnum.all_platform_instances
     for p in all_perms:
         permission = M2Permissions.load_by_params(
             system_name=p.sys_name
@@ -671,17 +661,17 @@ def sync_permissions():
                 system_name=p.sys_name,
                 description=p.description
             )
-            # M2RolePermissions.create(
-            #     role_id=admin_role.get('id'),
-            #     permission_id=permission.get('id')
-            # )
-            logger.debug('added %s to DB!' % permission)
+            M2RolePermissions.create(
+                role_id=admin_role.get('id'),
+                permission_id=permission.get('id')
+            )
+            logger.debug(f'added {permission} for `admin` role to DB')
         else:
-            # M2RolePermissions.load_or_create(
-            #     role_id=admin_role.get('id'),
-            #     permission_id=permission.get('id')
-            # )
-            # logger.debug('added [%s] permission for admin rule to DB!' % permission)
+            M2RolePermissions.load_or_create(
+                role_id=admin_role.get('id'),
+                permission_id=permission.get('id')
+            )
+            logger.debug(f'added {permission} for `admin` role to DB')
             pass
 
 
@@ -693,4 +683,4 @@ def dump_roles():
     roles = M2Roles.all()
     for role in roles:
         role.dump_role_permissions()
-        logger.debug('dumped role [%s][%s] to Redis!' % (role.get('id'), role.get('name')))
+        logger.debug(f'dumped role {role} to Redis')

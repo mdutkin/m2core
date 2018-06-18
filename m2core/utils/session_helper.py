@@ -1,4 +1,5 @@
 from m2core.utils.data_helper import DataHelper
+from m2core.data_schemes.db_system_scheme import M2Permissions
 from tornado.options import options
 
 
@@ -139,8 +140,10 @@ class SessionHelper:
             permissions = self._redis.smembers(
                 self._redis_scheme['ROLE_PERMISSIONS']['prefix'] % group_id
             )
-            for permission in permissions:
-                all_permissions.add(permission)
+            for p_name in permissions:
+                p = M2Permissions.load_by_params(system_name=p_name)
+                if p:
+                    all_permissions.add(p)
         return all_permissions
 
     def _check_inited(self):

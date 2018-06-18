@@ -23,7 +23,7 @@ class AdminUsersHandler(BaseHandler):
     """Manages users on the admin level. All methods here requires authorization"""
     @gen.coroutine
     @M2Core.tryex(*exceptions_list)
-    @M2Core.requires_permission
+    @M2Core.user_can
     def get(self, *args, **kwargs):
         """Get concrete user info by id or return info of your own"""
         self.validate_url_params(kwargs)
@@ -44,7 +44,7 @@ class AdminUsersHandler(BaseHandler):
 
     @gen.coroutine
     @M2Core.tryex(*exceptions_list)
-    @M2Core.requires_permission
+    @M2Core.user_can
     def post(self, *args, **kwargs):
         """Creates new user, input JSON has to be like:
         input_json = {
@@ -84,7 +84,7 @@ class AdminUsersHandler(BaseHandler):
 
     @gen.coroutine
     @M2Core.tryex(*exceptions_list)
-    @M2Core.requires_permission
+    @M2Core.user_can
     def put(self, *args, **kwargs):
         """Modifies user in the system
         input_json = {
@@ -136,7 +136,7 @@ class AdminUsersHandler(BaseHandler):
 
     @gen.coroutine
     @M2Core.tryex(*exceptions_list)
-    @M2Core.requires_permission
+    @M2Core.user_can
     def delete(self, *args, **kwargs):
         """Deletes user from DB"""
         self.validate_url_params(kwargs)
