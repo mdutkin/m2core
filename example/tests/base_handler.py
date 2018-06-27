@@ -24,7 +24,7 @@ class BaseHandlerTest(unittest.TestCase, RESTTest):
 
     @patch('m2core.bases.BaseHandler.finish')
     def test_write_json(self, m_finish):
-        bh = BaseHandler(app, http_server_request_factory(), human_route='/test', urlparser=MagicMock())
+        bh = BaseHandler(app, http_server_request_factory(), human_route='/test', url_parser=MagicMock())
         payload = [{
                 'field1': {
                     'list': [1, 2, '33', None],

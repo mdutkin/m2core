@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     # ENDPOINTS
     human_route = r'/docs.js'
-    m2core.route(human_route, RestApiDocsHandler, get=PlatformPermissions.skip)
+    m2core.route(human_route, RestApiDocsHandler, get=PlatformPermissions.SKIP)
 
     human_route = r'/admin/users/:{id:int}'
     m2core.route(
@@ -51,7 +51,7 @@ if __name__ == '__main__':
         human_route,
         AdminUsersHandler,
         get=None,
-        post=PlatformPermissions.skip,
+        post=PlatformPermissions.SKIP,
         put=None,
         delete=None
     )
@@ -73,14 +73,14 @@ if __name__ == '__main__':
     m2core.route(
         human_route,
         EvilRoutesHandler,
-        get=PlatformPermissions.skip
+        get=PlatformPermissions.SKIP
     )
 
     human_route = r'/schema.js'
     m2core.route(
         human_route,
         SchemaHandler,
-        get=PlatformPermissions.skip
+        get=PlatformPermissions.SKIP
     )
 
     human_route = r'/admin/schema.js'

@@ -157,21 +157,21 @@ class PermissionsEnum:
     AUTHORIZED = Permission('authorized')
 
     @classproperty
-    def all(cls):
+    def ALL(cls):
         cache_var_name = '__all_cache'
         cached_perms = getattr(cls, cache_var_name, None)
         if cached_perms is None:
             setattr(cls, cache_var_name, set())
             cached_perms = getattr(cls, cache_var_name)
             for attr_name in dir(cls):
-                if not attr_name.startswith('_') and attr_name != 'all':
+                if not attr_name.startswith('_') and attr_name != 'ALL':
                     attr = getattr(cls, attr_name)
                     if type(attr) is Permission:
                         cached_perms.add(attr)
         return cached_perms
 
     @classproperty
-    def skip(cls):
+    def SKIP(cls):
         return lambda p: True
 
     @classproperty
@@ -179,7 +179,7 @@ class PermissionsEnum:
         sub_classes = PermissionsEnum.__subclasses__()
         all_perms = set()
         for c in sub_classes:
-            all_perms |= c.all
+            all_perms |= c.ALL
 
         return all_perms
 

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 from tornado.httputil import HTTPServerRequest
 
 
-class UserRightsFactory:
+class OldUserRightsFactory:
     admin_permissions = ['admin', 'authenticated', ]
     authenticated_permissions = ['authenticated', ]
 

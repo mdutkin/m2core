@@ -29,7 +29,7 @@ class Rules(defaultdict):
             if method_upper in handler_cls.SUPPORTED_METHODS:
                 self[human_route]['docs'][method_upper] = handler_cls.__dict__[method].__doc__
                 # also add permissions per each method. default - skip check
-                permissions = PermissionsEnum.skip
+                permissions = PermissionsEnum.SKIP
                 for m, p in method_permissions.items():
                     if m.upper() == method_upper:
                         permissions = p

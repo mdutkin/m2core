@@ -29,9 +29,9 @@ from tornado.web import StaticFileHandler
 from concurrent.futures import ThreadPoolExecutor
 from typing import Type
 from voluptuous.error import Error as VoluptuousError
+from m2core.bases.base_handler import http_statuses
 from m2core.utils.url_parser import UrlParser
 from m2core.utils.session_helper import SessionHelper
-from m2core.bases.base_handler import http_statuses
 from m2core.utils.permissions import HandlerPermissions
 from m2core.utils.error import M2Error
 
@@ -98,7 +98,7 @@ class M2Core:
             if issubclass(type(permissions), Permission) or callable(permissions):
                 # didn't get user from Redis
                 if not handler_instance.current_user:
-                    # maybe it's permissions == PermissionsEnum.skip?
+                    # maybe it's permissions == PermissionsEnum.SKIP?
                     if permissions({}):
                         return handler_method(handler_instance, *args, **kwargs)
                     else:
@@ -209,12 +209,8 @@ class M2Core:
         Constructor
         """
         options.parse_command_line()
-        if options.config_name:
-            config_to_read = '%s/%s' % (os.getcwd(), options.config_name)
-        else:
-            config_to_read = '%s/%s' % (os.getcwd(), 'config.py')
-        logger.debug('path to config: %s' % config_to_read)
-        options.parse_config_file(config_to_read)
+        logger.debug('path to config: %s' % options.config_name)
+        options.parse_config_file(options.config_name)
         # override options from config with command line options
         options.parse_command_line()
 

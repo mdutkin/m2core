@@ -206,7 +206,7 @@ class PermissionsTest(unittest.TestCase):
         self.assertEqual(p.sys_name, custom_sys_name)
 
     def test_permissions_enum_all(self):
-        result = PlatformPerms.all
+        result = PlatformPerms.ALL
         expected_result = {
             PlatformPerms.AUTHORIZED,
             PlatformPerms.Perm1,

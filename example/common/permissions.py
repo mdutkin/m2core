@@ -1,7 +1,7 @@
 __author__ = 'Maxim Dutkin (max@dutkin.ru)'
 
 
-from m2core.common import Permission, BasePermissionRule, And, Or, Not, PermissionsEnum
+from m2core.common import Permission, PermissionsEnum
 
 
 class PlatformPermissions(PermissionsEnum):

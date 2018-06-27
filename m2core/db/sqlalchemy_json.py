@@ -5,8 +5,6 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 import json
 
 
-# TODO: Rewrite all queries into simple way! Queries has to be cached on the server side!
-# TODO: VERY IMPORTANT!!!! move all `difficult` db operations from this funcs to DB funcs
 class AlchemyJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         def dump_sqlalchemy_obj(sqlalchemy_obj):
