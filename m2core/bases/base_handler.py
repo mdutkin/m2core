@@ -61,6 +61,7 @@ class BaseHandler(RequestHandler):
         self.permissions = application.settings['permissions']
         self.url_parser = None
         self.human_route = None
+        self.m2core = None
         # Expire sql alchemy inner cache when initializing BaseHandler for incoming client
         if options.expire_on_connect:
             self.db_session.expire_all()
@@ -110,6 +111,7 @@ class BaseHandler(RequestHandler):
         """
         self.human_route = kwargs['human_route']
         self.url_parser = kwargs['url_parser']
+        self.m2core = kwargs['m2core']
 
     def validate_url_params(self, params: dict):
         """
@@ -215,6 +217,12 @@ class BaseHandler(RequestHandler):
 
         if not token:
             return None
+
+        # hack for test purposes
+        if options.allow_test_users:
+            user_data = self.m2core.get_test_user(token)
+            if user_data:
+                return user_data
 
         session = SessionHelper(self.redis_connector, self.redis_schema)
         session.init_user(token)

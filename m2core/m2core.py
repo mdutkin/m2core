@@ -18,6 +18,7 @@ from m2core.data_schemes.redis_system_scheme import redis_scheme
 from m2core.data_schemes.db_system_scheme import M2Roles
 from m2core.data_schemes.db_system_scheme import M2RolePermissions
 from m2core.data_schemes.db_system_scheme import M2Permissions
+from random import randint
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.engine import Engine
@@ -105,7 +106,7 @@ class M2Core:
                         raise HTTPError(http_statuses['WRONG_CREDENTIALS']['code'],
                                         http_statuses['WRONG_CREDENTIALS']['msg'])
 
-                user_generic_perms = {p.enum_member for p in handler_instance.current_user['permissions']}
+                user_generic_perms = handler_instance.current_user['permissions']
 
                 check_result = permissions(user_generic_perms)
                 if check_result:
@@ -213,6 +214,8 @@ class M2Core:
         options.parse_config_file(options.config_name)
         # override options from config with command line options
         options.parse_command_line()
+        # search for already initialized config variables in environment
+        parse_environment()
 
         self.__db_engine = None  # engine for db_session
         self.__db_session = None  # singleton of SQLAlchemy connections pool
@@ -225,6 +228,7 @@ class M2Core:
         self.__handler_validators = dict()  # all validators (UrlParser instance) of all methods of all routes
         self.__started = False
         self.__app = None
+        self.__test_users = dict()  # used for impersonation users during integration tests
 
         # make singleton of thread pool
         self.__make_thread_pool()
@@ -288,6 +292,7 @@ class M2Core:
         tornado_handler_params = {
             'human_route': human_route,
             'url_parser': url_parser,
+            'm2core': self
         }
         if extra:
             tornado_handler_params.update(extra)
@@ -611,6 +616,32 @@ class M2Core:
         self.__app = self.__make_app()
         return self.__app
 
+    def add_test_user(self, at: str, user_id: int=None, permissions: set=None):
+        """
+        USE ONLY FOR TESTING
+        Adds user to global dict, where keys are access tokens, and values are user's info dict. Main
+        purpose of it to allow users' impersonation during integration tests. For proper impersonation
+        you also need to set `options.allow_test_users` to `True`
+
+        :param at: access token, generate whatever value you want
+        :param user_id: id of test user
+        :param permissions: set of user permissions
+        """
+        self.__test_users[at] = {
+            'id': user_id if user_id else randint(1, 10000),
+            'access_token': at,
+            'permissions': permissions
+        }
+
+    def get_test_user(self, at: str) -> dict:
+        """
+        Returns test user's data by access token
+
+        :param at: access token
+        :return: dict with user's info
+        """
+        return self.__test_users.get(at)
+
 
 def sync_permissions():
     """
@@ -680,3 +711,18 @@ def dump_roles():
     for role in roles:
         role.dump_role_permissions()
         logger.debug(f'dumped role {role} to Redis')
+
+
+def parse_environment():
+    """
+    Iterates through already inited options and tries to find same names in environment. If finds any - overwrites
+    existing. In `tornado.options` options could be in any case, but in environment they're searched in upper case
+    """
+    for o, v in options.items():
+        try:
+            env_value = os.environ[o.upper()]
+            # determine original type of var
+            original_type = type(v)
+            setattr(options, o, original_type(env_value))
+        except KeyError:
+            continue

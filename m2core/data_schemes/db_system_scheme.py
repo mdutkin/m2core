@@ -46,9 +46,17 @@ class M2Permissions(BaseModel):
                 if p.sys_name == sys_name:
                     setattr(self, '__enum_member', p)
                     return p
-            raise M2Error(f'No corresponding enum member found for permission.sys_name=`{sys_name}`')
+            raise M2Error(f'No corresponding enum member found for Permission with sys_name=`{sys_name}`')
         else:
             return getattr(self, '__enum_member')
+
+    @classmethod
+    def from_enum_member(cls, member: Permission):
+        entity = cls.s.query(M2RolePermissions).filter(M2Permissions.system_name == member.sys_name).first()
+        if not entity:
+            raise M2Error(f'No corresponding permission found for Permission with sys_name=`{member.sys_name}`')
+
+        return entity
 
 
 class M2Roles(BaseModel):

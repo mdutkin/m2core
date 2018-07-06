@@ -1,3 +1,8 @@
+from unittest.mock import patch
+from m2core.utils.session_helper import SessionHelper
+from m2core.utils.data_helper import DataHelper
+from m2core import M2Core
+from contextlib import ContextDecorator
 from tornado import httpclient
 from tornado.escape import json_decode
 from tornado.httputil import HTTPHeaders
@@ -141,11 +146,12 @@ class M2CoreAsyncHTTPTestCase(AsyncHTTPTestCase):
         raise NotImplemented('You must implement method which returns M2Core instance')
 
     def get_app(self):
-        m2core = self.init_m2core()
+        self.m2core = self.init_m2core()
         options.debug = False
-        return m2core.run_for_test()
+        return self.m2core.run_for_test()
 
-    def fetch_bytes(self, url: str, method: str= 'GET', expected_codes=None, data=None, **kwargs) -> bytes:
+    def fetch_bytes(self, url: str, method: str= 'GET', expected_codes=None, data=None, user_permissions=None,
+                    **kwargs) -> bytes:
         """
         Получаем/отправляем данные на сервер
         Fetches/sends data on server (depends on method)
@@ -187,6 +193,13 @@ class M2CoreAsyncHTTPTestCase(AsyncHTTPTestCase):
         options = kwargs
         # if method is PUT or POST - it means we will send data to server. since M2Core is JSON-based
         # REST-api core, we'll form a JSON, place it in body and add special headers
+        h = HTTPHeaders()
+        if user_permissions:
+            # hack for test user
+            rnd_at = DataHelper.random_hex_str(16)
+            self.m2core.add_test_user(rnd_at, permissions=user_permissions)
+            h.add('X-Access-Token', rnd_at)
+
         if method not in ['POST', 'PUT']:
             options.update(dict(
                 method=method,
@@ -194,11 +207,12 @@ class M2CoreAsyncHTTPTestCase(AsyncHTTPTestCase):
                 user_agent='M2Core Unittests',
                 use_gzip=False,
                 allow_nonstandard_methods=True,
-                connect_timeout=5
+                connect_timeout=5,
+                headers=h
             ))
         else:
             # prepare headers
-            h = HTTPHeaders({'Content-Type': 'application/json; charset=utf-8'})
+            h.add('Content-Type', 'application/json; charset=utf-8')
             # and body. make it JSON if it has dict() type
             b = json.dumps(data) if isinstance(data, dict) else data
             options.update(dict(
@@ -218,8 +232,9 @@ class M2CoreAsyncHTTPTestCase(AsyncHTTPTestCase):
             response_code, method, url))
         return response.body
 
-    def fetch_json(self, url: str, method: str = 'GET', expected_codes=None, data=None, **kwargs) -> dict:
-        return json_decode(self.fetch_bytes(url, method, expected_codes, data, **kwargs))
+    def fetch_json(self, url: str, method: str = 'GET', expected_codes=None, data=None,
+                   user_permissions=None, **kwargs) -> dict:
+        return json_decode(self.fetch_bytes(url, method, expected_codes, data, user_permissions, **kwargs))
 
     def upload_file(self, filename: str) -> bytes:
         """

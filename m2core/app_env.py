@@ -5,6 +5,7 @@ from tornado.options import define
 # - tornado config
 define('debug', default=False, help='Tornado debug mode', type=bool)
 define('debug_orm', default=False, help='SQLAlchemy debug mode', type=bool)
+define('allow_test_users', default=False, help='Allows decorator `user_can` work with test users\' data', type=bool)
 define('config_name', default='config.py', help='Config name', type=str)
 define('admin_role_name', default='admins', help='Admin group name', type=str)
 define('default_role_name', default='users', help='Default user group with login permissions', type=str)
