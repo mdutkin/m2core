@@ -30,7 +30,7 @@ define('pg_password', default='password', help='Database password', type=str)
 define('pg_pool_size', default=40, help='Pool size for bg executor', type=int)
 define('pg_pool_recycle', default=-1, help='Pool recycle time in sec, -1 - disable', type=int)
 define('expire_on_connect', default=True, help='Expire sqlalchemy inner cache when initializing BaseHandler '
-                                               'for incoming client', type=True)
+                                               'for incoming client', type=bool)
 # - redis config
 define('redis_host', default='127.0.0.1', help='Redis host', type=str)
 define('redis_port', default=6379, help='Redis port', type=int)

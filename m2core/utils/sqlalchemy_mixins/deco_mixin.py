@@ -9,7 +9,7 @@ class DecoMixin:
 
     @declared_attr
     def __tablename__(cls):
-        return DataHelper.camel_to_underline(cls.__name__)
+        return cls.__name__
 
     def __repr__(self):
         columns = self.__table__.c

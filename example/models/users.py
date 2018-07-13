@@ -1,6 +1,6 @@
 from sqlalchemy import Column, BigInteger, Integer, String, func
 import bcrypt
-from m2core.data_schemes.db_system_scheme import M2UserRoles, M2Roles, M2Error, BaseModel, CreatedMixin
+from m2core.data_schemes.db_system_scheme import M2UserRole, M2Role, M2Error, BaseModel, CreatedMixin
 
 
 class User(BaseModel, CreatedMixin):
@@ -37,11 +37,11 @@ class User(BaseModel, CreatedMixin):
         Adds new role for user. User can have unlimited number of roles. If he already has this role - do nothing
         :param _role_name: role name
         """
-        role = M2Roles.load_by_params(name=_role_name)
+        role = M2Role.load_by_params(name=_role_name)
         if not role:
             raise M2Error('Trying to add non-existent role', True)
 
-        M2UserRoles.load_or_create(user_id=self.get('id'), role_id=role.get('id'))
+        M2UserRole.load_or_create(user_id=self.get('id'), role_id=role.get('id'))
 
         roles = [role.get('role_id') for role in self.get_roles()]
         self.sh.dump_user_roles(self.get('id'), roles)
@@ -51,7 +51,7 @@ class User(BaseModel, CreatedMixin):
         Returns all user roles list
         :return: list of roles
         """
-        user_roles = M2UserRoles.all(user_id=self.get('id'))
+        user_roles = M2UserRole.all(user_id=self.get('id'))
         return [role for role in user_roles]
 
     @classmethod

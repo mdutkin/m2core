@@ -90,13 +90,6 @@ if __name__ == '__main__':
         get=PlatformPermissions.ADMIN
     )
 
-    human_route = r'/test.js'
-    m2core.route(
-        human_route,
-        MyHandler,
-        get=PlatformPermissions.AUTHORIZED & PlatformPermissions.VIEW_SOME_INFO & PlatformPermissions.EDIT_SOME_INFO
-    )
-
     # that's the way you can do something non-blocking in background
     @coroutine
     def my_cool_callback(*args, **kwargs):

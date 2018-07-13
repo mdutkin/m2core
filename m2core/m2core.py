@@ -15,9 +15,9 @@ from m2core.bases.base_model import MetaBase, EnchantedMixin
 from m2core.common.permissions import Permission, PermissionsEnum
 from m2core.common.rules import Rules
 from m2core.data_schemes.redis_system_scheme import redis_scheme
-from m2core.data_schemes.db_system_scheme import M2Roles
-from m2core.data_schemes.db_system_scheme import M2RolePermissions
-from m2core.data_schemes.db_system_scheme import M2Permissions
+from m2core.data_schemes.db_system_scheme import M2Role
+from m2core.data_schemes.db_system_scheme import M2RolePermission
+from m2core.data_schemes.db_system_scheme import M2Permission
 from random import randint
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -649,28 +649,28 @@ def sync_permissions():
     and stores them in DB, also with caching them in Redis
     """
     # load or create default admin role
-    admin_role = M2Roles.load_by_params(name=options.admin_role_name)
+    admin_role = M2Role.load_by_params(name=options.admin_role_name)
     # admin group, which holds all new added permissions
     if not admin_role:
         # if there is no such group (i.e. - first run) - create it
-        admin_role = M2Roles.load_or_create(
+        admin_role = M2Role.load_or_create(
             name=options.admin_role_name,
             description='Superuser role with all existing permissions'
         )
     # default group for all authorized users
-    default_role = M2Roles.load_by_params(name=options.default_role_name)
+    default_role = M2Role.load_by_params(name=options.default_role_name)
     if not default_role:
         # if there is no such group (i.e. - first run) - create it
-        default_role = M2Roles.create(
+        default_role = M2Role.create(
             name=options.default_role_name,
             description='Default user role'
         )
 
     # now we add default permission, which will be added to all newly created users
-    permission = M2Permissions.load_by_params(name=options.default_permission)
+    permission = M2Permission.load_by_params(name=options.default_permission)
     if not permission:
-        permission = M2Permissions.create(name=options.default_permission, system_name=options.default_permission)
-    M2RolePermissions.load_or_create(
+        permission = M2Permission.create(name=options.default_permission, system_name=options.default_permission)
+    M2RolePermission.load_or_create(
         role_id=default_role.get('id'),
         permission_id=permission.get('id')
     )
@@ -679,22 +679,22 @@ def sync_permissions():
     # for new permissions model
     all_perms = PermissionsEnum.all_platform_instances
     for p in all_perms:
-        permission = M2Permissions.load_by_params(
+        permission = M2Permission.load_by_params(
             system_name=p.sys_name
         )
         if not permission:
-            permission = M2Permissions.create(
+            permission = M2Permission.create(
                 name=p.name,
                 system_name=p.sys_name,
                 description=p.description
             )
-            M2RolePermissions.create(
+            M2RolePermission.create(
                 role_id=admin_role.get('id'),
                 permission_id=permission.get('id')
             )
             logger.debug(f'added {permission} for `admin` role to DB')
         else:
-            M2RolePermissions.load_or_create(
+            M2RolePermission.load_or_create(
                 role_id=admin_role.get('id'),
                 permission_id=permission.get('id')
             )
@@ -707,7 +707,7 @@ def dump_roles():
     Caches all permissions of each role to Redis
     """
     # TODO: complete refactoring
-    roles = M2Roles.all()
+    roles = M2Role.all()
     for role in roles:
         role.dump_role_permissions()
         logger.debug(f'dumped role {role} to Redis')
