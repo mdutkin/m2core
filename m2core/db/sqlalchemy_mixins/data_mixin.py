@@ -1,12 +1,12 @@
 from .session_mixin import SessionMixin
-from .decorators import classproperty
-from sqlalchemy import func, asc, desc, text
+from sqlalchemy import func, text
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import RelationshipProperty, class_mapper
 from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.engine import reflection
 from m2core.utils.error import M2Error
+from m2core.utils.decorators import classproperty
 import operator
 import copy
 

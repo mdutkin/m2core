@@ -2,24 +2,17 @@ __author__ = 'Maxim Dutkin (max@dutkin.ru)'
 
 
 import unittest
-import os
 from m2core import M2Core
 from m2core.utils.url_parser import UrlParser
 from m2core.utils.tests import RESTTest
-from tornado.options import options
 from voluptuous import Schema, Error
-
-
-options.config_name = os.getenv('TEST_CONFIG', 'config_local.py')
-
-m2core = M2Core()
-app = m2core.run_for_test()
 
 
 class UrlParserTest(unittest.TestCase, RESTTest):
 
     def setUp(self):
-        pass
+        m2core = M2Core()
+        m2core.run_for_test()
 
     def test_parser(self):
         valid_urls = {

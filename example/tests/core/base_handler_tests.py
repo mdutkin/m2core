@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 from m2core import M2Core
 from m2core.bases import BaseHandler
 from m2core.utils.tests import RESTTest
-from tornado.options import options
+from m2core.common.options import options
 from example.tests.helpers import http_server_request_factory
 
 

@@ -7,7 +7,7 @@ from tornado import httpclient
 from tornado.escape import json_decode
 from tornado.httputil import HTTPHeaders
 from tornado.testing import AsyncHTTPTestCase
-from tornado.options import options
+from m2core.common.options import options
 import json
 import logging
 

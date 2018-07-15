@@ -1,13 +1,12 @@
-import bcrypt
 from m2core.bases.base_handler import BaseHandler, http_statuses
 from m2core.m2core import M2Core
 from m2core.utils.error import M2Error
 from example.models import User
 from tornado import gen
-from tornado.options import options
+from m2core.common.options import options
 from json.decoder import JSONDecodeError
 from tornado.escape import json_decode
-from sqlalchemy import exc, func
+from sqlalchemy import exc
 from voluptuous import Required, Optional, Schema, All, Length, Email, In
 import bcrypt
 

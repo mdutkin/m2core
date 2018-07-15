@@ -55,7 +55,7 @@ class M2Permission(BaseModel):
     @property
     def enum_member(self):
         if not hasattr(self, '__enum_member'):
-            all_perms = PermissionsEnum.all_platform_instances
+            all_perms = PermissionsEnum.all_platform_permissions
             sys_name = self.system_name
             for p in all_perms:
                 if p.sys_name == sys_name:

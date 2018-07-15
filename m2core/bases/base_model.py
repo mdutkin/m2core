@@ -1,5 +1,5 @@
-from m2core.utils.sqlalchemy_mixins.deco_mixin import DecoMixin
-from m2core.utils.sqlalchemy_mixins.data_mixin import DataMixin
+from m2core.db.sqlalchemy_mixins import DecoMixin
+from m2core.db.sqlalchemy_mixins import DataMixin
 from sqlalchemy.ext.declarative import declarative_base
 
 MetaBase = declarative_base()

@@ -1,4 +1,4 @@
-from tornado.options import options
+from m2core.common.options import options
 # import all handlers
 from example.handlers import *
 # import core

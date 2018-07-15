@@ -7,7 +7,6 @@ import logging
 import redis
 import tornado.ioloop
 import tornado.web
-import os
 import warnings
 # needed for env initialization
 from m2core.app_env import *
@@ -23,7 +22,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import QueuePool
-from tornado.options import options
+from m2core.common.options import options
 from tornado.web import HTTPError, RequestHandler
 from tornado.websocket import WebSocketHandler
 from tornado.web import StaticFileHandler
@@ -209,13 +208,13 @@ class M2Core:
         """
         Constructor
         """
-        options.parse_command_line()
+        # search for config variables in environment
+        options.parse_environment()
         logger.debug('path to config: %s' % options.config_name)
         options.parse_config_file(options.config_name)
-        # override options from config with command line options
-        options.parse_command_line()
-        # search for already initialized config variables in environment
-        parse_environment()
+        if options.parse_cli_options:
+            # override options from config with command line options
+            options.parse_command_line()
 
         self.__db_engine = None  # engine for db_session
         self.__db_session = None  # singleton of SQLAlchemy connections pool
@@ -677,7 +676,7 @@ def sync_permissions():
     logger.debug(f'added {permission} for `default` role to DB')
 
     # for new permissions model
-    all_perms = PermissionsEnum.all_platform_instances
+    all_perms = PermissionsEnum.all_platform_permissions
     for p in all_perms:
         permission = M2Permission.load_by_params(
             system_name=p.sys_name
@@ -711,18 +710,3 @@ def dump_roles():
     for role in roles:
         role.dump_role_permissions()
         logger.debug(f'dumped role {role} to Redis')
-
-
-def parse_environment():
-    """
-    Iterates through already inited options and tries to find same names in environment. If finds any - overwrites
-    existing. In `tornado.options` options could be in any case, but in environment they're searched in upper case
-    """
-    for o, v in options.items():
-        try:
-            env_value = os.environ[o.upper()]
-            # determine original type of var
-            original_type = type(v)
-            setattr(options, o, original_type(env_value))
-        except KeyError:
-            continue

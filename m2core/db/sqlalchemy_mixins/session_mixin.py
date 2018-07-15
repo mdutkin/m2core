@@ -1,6 +1,6 @@
 from redis import StrictRedis
 from sqlalchemy.orm import Session, scoped_session, Query
-from m2core.utils.sqlalchemy_mixins.decorators import classproperty
+from m2core.utils.decorators import classproperty
 from m2core.utils.error import M2Error
 
 

@@ -127,3 +127,15 @@ I should say a few words about url mask. It supports it's own rules and later ge
 |/users/:{id:int(0,\[0-100\])}                      | :id    | int, any length (0), but value must be between `0` and `100`                                   |
 |/users/:{id:float(0,\[0-100\])}                    | :id    | float, any length (0), but value must be between `0` and `100`                                 |
 |/users/:{id:string(0,\[string1;string2;string3\])} | :id    | string, any length (0), but value must be in list of values: ('string1', 'string2', 'string3') |
+
+
+
+## Testing
+
+To run all existing tests use command:
+
+```bash
+TEST_CONFIG=PATH_TO_CONFIG PARSE_CLI_OPTIONS=0 nosetests example.tests
+```
+
+`PARSE_CLI_OPTIONS=0` is required, otherwise during integration tests M2Core will try to parse cli args, thinking that it's args of launch script.

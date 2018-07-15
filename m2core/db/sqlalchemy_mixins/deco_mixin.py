@@ -1,5 +1,4 @@
 from sqlalchemy.ext.declarative import declared_attr
-from m2core.utils.data_helper import DataHelper
 
 
 class DecoMixin:

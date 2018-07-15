@@ -1,8 +1,7 @@
-from tornado.options import options
+from m2core.common.options import options
 # import all handlers
 from example.handlers import *
 # import permissions
-from m2core.common import And, Or, Not
 from example.common.permissions import PlatformPermissions
 # import core
 import logging

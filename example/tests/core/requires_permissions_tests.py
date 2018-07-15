@@ -8,7 +8,7 @@ from m2core import M2Core
 from m2core.bases import BaseHandler
 from m2core.bases import http_statuses
 from m2core.utils.tests import RESTTest
-from tornado.options import options
+from m2core.common.options import options
 from tornado.web import HTTPError
 from example.tests.helpers import OldUserRightsFactory, http_server_request_factory
 

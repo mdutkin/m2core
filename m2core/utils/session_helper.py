@@ -1,6 +1,6 @@
 from m2core.utils.data_helper import DataHelper
 from m2core.data_schemes.db_system_scheme import M2Permission
-from tornado.options import options
+from m2core.common.options import options
 
 
 class SessionHelper:

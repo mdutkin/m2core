@@ -2,7 +2,7 @@ __author__ = 'Maxim Dutkin (max@dutkin.ru)'
 
 
 import re
-from m2core.utils.sqlalchemy_mixins.decorators import classproperty
+from m2core.utils.decorators import classproperty
 
 
 class BasePermissionRule(list):
@@ -153,7 +153,23 @@ class Permission:
             return f'<{self.__class__.__name__}.{self.sys_name}>'
 
 
-class PermissionsEnum:
+class PermissionsEnumMeta(type):
+    """Metaclass for PermissionsEnum"""
+
+    def __init__(cls, name, bases, nmspc):
+        super(PermissionsEnumMeta, cls).__init__(name, bases, nmspc)
+        if not hasattr(cls, 'registry'):
+            cls.registry = set()
+        cls.registry.add(cls)
+        cls.registry -= set(bases)  # Remove base classes
+
+    def __str__(cls):
+        if cls in cls.registry:
+            return cls.__name__
+        return cls.__name__ + ": " + ", ".join([sc.__name__ for sc in cls])
+
+
+class PermissionsEnum(metaclass=PermissionsEnumMeta):
     AUTHORIZED = Permission('authorized')
 
     @classproperty
@@ -175,8 +191,8 @@ class PermissionsEnum:
         return lambda p: True
 
     @classproperty
-    def all_platform_instances(cls):
-        sub_classes = PermissionsEnum.__subclasses__()
+    def all_platform_permissions(cls):
+        sub_classes = PermissionsEnum.registry
         all_perms = set()
         for c in sub_classes:
             all_perms |= c.ALL
