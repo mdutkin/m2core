@@ -201,13 +201,13 @@ class BaseHandler(RequestHandler):
         """
         # looking for access_token in GET params, then in X-Access-Token header
         # TODO: add Cookie support
-        token = (self.get_argument("access_token", None) or
+        token = (self.get_argument(options.access_token_param, None) or
                  self.request.headers.get("X-Access-Token"))
         try:
             if not token and self.request.headers.get('Content-Type') and 'application/json;' \
                     in self.request.headers.get('Content-Type').lower():
                 body = escape.json_decode(self.request.body)
-                token = body['access_token']
+                token = body[options.access_token_param]
         except json.decoder.JSONDecodeError as err:
             # not a json :(
             logger.warning('Access token in request body is not a JSON')

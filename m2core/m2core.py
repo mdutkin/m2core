@@ -681,6 +681,7 @@ def sync_permissions():
         permission = M2Permission.load_by_params(
             system_name=p.sys_name
         )
+        logger.debug(f'checking {permission}')
         if not permission:
             permission = M2Permission.create(
                 name=p.name,

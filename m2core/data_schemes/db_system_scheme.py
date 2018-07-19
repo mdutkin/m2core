@@ -7,7 +7,6 @@ from sqlalchemy import (
     ForeignKey,
     String,
     UniqueConstraint,
-    func,
     text,
 )
 from sqlalchemy.exc import SQLAlchemyError
@@ -21,8 +20,8 @@ class CreatedMixin:
     """
     Stored in UTC without any offset and timezone
     """
-    created = Column(DateTime(timezone=False), default=func.now(), server_default=text('now()'), nullable=False)
-    updated = Column(DateTime(timezone=False), default=func.now(), server_default=text('now()'),
+    created = Column(DateTime(timezone=False), default=datetime.utcnow, server_default=text('now()'), nullable=False)
+    updated = Column(DateTime(timezone=False), default=datetime.utcnow, server_default=text('now()'),
                      onupdate=datetime.utcnow, nullable=False)
 
 

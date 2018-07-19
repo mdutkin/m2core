@@ -138,7 +138,7 @@ class DataMixin(SessionMixin):
 
     def get(self, item):
         """
-        Universal getter of attributes from sqlaclhemy model instance
+        Universal getter of attributes from sqlalchemy model instance
         :param item: key
         :return: value
         """
@@ -198,7 +198,7 @@ class DataMixin(SessionMixin):
         cls_inst.save()
         return cls_inst
 
-    def save(self):
+    def save(self, flush_only=False):
         """
         Saves changes to DB. If there is `updated` field in model - sets it's value to current time
         """
@@ -207,7 +207,11 @@ class DataMixin(SessionMixin):
             if 'updated' in self.columns and self.get('updated') is not None:
                 self.set(updated=text('now()'))
             self.s.add(self)
-            self.s.commit()
+            if flush_only:
+                self.s.flush()
+            else:
+                self.s.commit()
+
             return self
         except SQLAlchemyError:
             self.s.rollback()

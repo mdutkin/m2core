@@ -19,9 +19,6 @@ app = m2core.run_for_test()
 
 class BaseHandlerTest(unittest.TestCase, RESTTest):
 
-    def setUp(self):
-        pass
-
     @patch('m2core.bases.BaseHandler.finish')
     def test_write_json(self, m_finish):
         bh = BaseHandler(app, http_server_request_factory(), human_route='/test', url_parser=MagicMock())

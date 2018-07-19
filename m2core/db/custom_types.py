@@ -47,4 +47,4 @@ class IntEnumType(TypeDecorator):
         if value is None:
             return value
 
-        return self.__enum_struct.get_by_int(value)
+        return self.__enum_struct.get(value)
